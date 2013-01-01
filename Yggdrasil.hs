@@ -9,21 +9,25 @@ import Network.Wai.Middleware.Static
 
 import Network.HTTP.Types (status404)
 
+import Control.Concurrent
 import Control.Concurrent.STM
 import Control.Concurrent.STM.TVar
 
 import Data.Monoid (mconcat)
-import Data.Foldable
+import Data.Foldable (foldl', msum)
 import Data.Tree
 import Data.IORef
 import Data.Maybe
 
 import Data.Aeson (ToJSON (..), object, (.=))
+import qualified Data.Aeson as JSON
 
 import qualified Data.Text.Lazy as T
 import Data.Text.Lazy.Encoding
 
-import Control.Monad (liftM)
+import qualified Network.WebSockets as WS
+
+import Control.Monad (liftM, forM_)
 import Control.Monad.IO.Class (liftIO)
 
 import GHC.Generics
@@ -46,10 +50,13 @@ instance ToJSON Yggdrasil where
     
 instance ToJSON NodeId
 instance ToJSON NodeContent
+instance ToJSON Event
 
 main = do
   nextNodeIdRef <- newIORef 1
   eventsRef <- newTVarIO []
+  
+  forkIO $ webSocketServer eventsRef
   
   scotty 3000 $ do
     
@@ -67,6 +74,26 @@ main = do
       maybe (status status404 >> text "not found") json
         (findNode (NodeId nodeId) (growTree events))
         
+type Client = WS.Sink WS.Hybi00
+type ServerState = [Client]
+
+broadcastEvent :: ServerState -> Event -> IO ()
+broadcastEvent clients e =
+  forM_ clients (flip WS.sendSink $ WS.textData $ decodeUtf8 $ JSON.encode e)
+
+webSocketServer :: TVar [Event] -> IO ()
+webSocketServer events = do
+  state <- newMVar []
+  WS.runServer "0.0.0.0" 9160 $ handleWebSocket events state
+                                       
+handleWebSocket :: TVar [Event] -> MVar ServerState -> WS.Request -> WS.WebSockets WS.Hybi00 ()
+handleWebSocket events state rq = do
+    WS.acceptRequest rq
+    WS.getVersion >>= liftIO . putStrLn . ("Client version: " ++)
+    sink <- WS.getSink
+    es <- liftIO . atomically $ readTVar events
+    liftIO $ forM_ es (broadcastEvent [sink])
+
 consumeNodeId :: IORef Integer -> IO Integer
 consumeNodeId = flip atomicModifyIORef (\n -> (n + 1, n))
 

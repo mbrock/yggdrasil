@@ -7,7 +7,6 @@ $ ->
         type: 'PUT'
         url: "/#{tree.id}"
         data: content
-        success: -> location.reload()
 
   renderTree = (tree) ->
     $('<div/>').addClass('branches')
@@ -18,3 +17,9 @@ $ ->
   
   $.getJSON('/0').success (tree) ->
     $("body").append renderTree(tree)
+
+  socket = new WebSocket("ws://#{location.hostname}:9160")
+  socket.onopen = (event) ->
+    socket.onmessage = (event) ->
+      alert(event.data)
+      
