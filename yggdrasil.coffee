@@ -31,6 +31,5 @@ $ ->
   socket = new WebSocket("ws://#{location.hostname}:9160")
   socket.onopen = (event) ->
     socket.onmessage = (event) ->
-      [id, parentId, content] = JSON.parse event.data
-      addNode(id, parentId, content)
+      addNode (JSON.parse event.data)
       
