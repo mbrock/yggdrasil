@@ -65,7 +65,7 @@ main = do
     
   scotty 3000 $ do
     
---    middleware logStdoutDev
+    middleware logStdoutDev
     middleware static
   
     put "/:parentId" $ \parentId -> do
