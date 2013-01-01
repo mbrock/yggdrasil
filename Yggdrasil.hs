@@ -6,13 +6,15 @@ import Web.Scotty
 import Network.Wai
 import Network.Wai.Middleware.RequestLogger
 
+import Network.HTTP.Types (status404)
+
 import Data.Monoid (mconcat)
 import Data.Foldable
 import Data.Tree
 import Data.IORef
 import Data.Maybe
 
-import Data.Aeson as JSON
+import Data.Aeson (ToJSON (..), object, (.=))
 
 import qualified Data.Text.Lazy as T
 import Data.Text.Lazy.Encoding
@@ -57,9 +59,9 @@ main = do
 
     get "/:nodeId" $ \nodeId -> do
       events <- liftIO $ readIORef eventsRef
-      text . decodeUtf8 $
-        maybe (encode $ toJSON ("not found" :: String)) encode
-          (findNode (NodeId nodeId) (growTree events))
+      case findNode (NodeId nodeId) (growTree events) of
+        Nothing -> status status404 >> text "not found"
+        Just x -> json x
       
 consumeNodeId :: IORef Integer -> IO Integer
 consumeNodeId = flip atomicModifyIORef (\n -> (n + 1, n))
