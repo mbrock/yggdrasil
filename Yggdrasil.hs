@@ -23,11 +23,13 @@ import Data.Tree
 import Data.IORef
 import Data.Maybe
 
-import Data.Aeson (ToJSON (..), object, (.=))
+import Data.Aeson (ToJSON (..), FromJSON (..), object, (.=))
 import qualified Data.Aeson as JSON
 
 import qualified Data.Text.Lazy as T
 import Data.Text.Lazy.Encoding
+
+import qualified Data.ByteString.Lazy as BS
 
 import qualified Network.WebSockets as WS
 
@@ -55,10 +57,21 @@ instance ToJSON Yggdrasil where
 instance ToJSON NodeId
 instance ToJSON NodeContent
 instance ToJSON Event
+instance FromJSON NodeId
+instance FromJSON NodeContent
+instance FromJSON Event
+
+eventLogPath = "events.json"
+
+saveEvents :: TVar [Event] -> IO ()
+saveEvents v = atomically (readTVar v) >>=
+               BS.writeFile eventLogPath . JSON.encode
 
 main = do
+  Just eventLog <- fmap JSON.decode (BS.readFile eventLogPath)
+  
   nextNodeIdRef <- newIORef 1
-  eventsRef <- newTVarIO []
+  eventsRef <- newTVarIO eventLog
   eventsChan <- newTChanIO
   
   forkIO $ webSocketServer eventsRef eventsChan
@@ -96,7 +109,7 @@ broadcastEvent clients e = do
   print (length $ ssClients clients, e)
   forM_ (map clientSink $ ssClients clients)
     (flip WS.sendSink $ WS.textData $ decodeUtf8 $ JSON.encode e)
-
+  
 webSocketServer :: TVar [Event] -> TChan Event -> IO ()
 webSocketServer events eventsChan = do
   state <- newMVar (ServerState [] 0)
@@ -108,6 +121,7 @@ webSocketServer events eventsChan = do
       print e
       clients <- readMVar state
       broadcastEvent clients e
+      saveEvents events
   
   WS.runServer "0.0.0.0" 9160 $ handleWebSocket events state
                                        
