@@ -1,7 +1,8 @@
 {-# LANGUAGE OverloadedStrings, TypeSynonymInstances, FlexibleInstances, 
              DeriveGeneric #-}
 
-import Web.Scotty (scotty, get, put, middleware, body, text, json, status)
+import Web.Scotty (scotty, get, put, middleware, body,
+                   text, json, status, redirect)
 
 import Network.Wai
 import Network.Wai.Middleware.RequestLogger
@@ -77,6 +78,9 @@ main = do
       events <- liftIO . atomically $ readTVar eventsRef
       maybe (status status404 >> text "not found") json
         (findNode (NodeId nodeId) (growTree events))
+        
+    get "/" $ do
+      redirect "/index.html"
         
 data Client = Client { clientId :: Integer
                      , clientSink :: WS.Sink WS.Hybi00 }
