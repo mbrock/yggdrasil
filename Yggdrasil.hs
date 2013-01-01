@@ -1,4 +1,5 @@
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE OverloadedStrings, TypeSynonymInstances, FlexibleInstances, 
+             DeriveGeneric #-}
 
 import Web.Scotty
 
@@ -8,22 +9,34 @@ import Data.Tree
 import Data.IORef
 import Data.Maybe
 
+import Data.Aeson as JSON
+
 import qualified Data.Text.Lazy as T
 import Data.Text.Lazy.Encoding
 
 import Control.Monad (liftM)
 import Control.Monad.IO.Class (liftIO)
 
+import GHC.Generics
+
 newtype NodeId = NodeId Integer
-               deriving (Eq, Show)
+               deriving (Eq, Show, Generic)
                         
 newtype NodeContent = NodeContent T.Text
-                    deriving (Eq, Show)
+                    deriving (Eq, Show, Generic)
 
 data Event = NodeAdded NodeId NodeId NodeContent
-           deriving (Eq, Show)
+           deriving (Eq, Show, Generic)
 
 type Yggdrasil = Tree (NodeId, NodeContent)
+
+instance ToJSON Yggdrasil where
+  toJSON (Node (id, content) xs) =
+    object ["id" .= id, "content" .= content,
+            "branches" .= map toJSON xs]
+    
+instance ToJSON NodeId
+instance ToJSON NodeContent
 
 main = do
   nextNodeIdRef <- newIORef 1
@@ -31,20 +44,23 @@ main = do
 
   scotty 3000 $ do
   
-    put "/:parentId" $ do
-      parentId <- liftM NodeId (param "parentId")
+    put "/:parentId" $ \parentId -> do
       content <- liftM (NodeContent . decodeUtf8) body
-      nextNodeId <- liftIO $ atomicModifyIORef nextNodeIdRef (\n -> (n + 1, n))
-      let event = NodeAdded (NodeId nextNodeId) parentId content
-      liftIO $ modifyIORef eventsRef (++ [event])
+      nextNodeId <- liftIO $ (consumeNodeId nextNodeIdRef)
+      let event = NodeAdded (NodeId nextNodeId) (NodeId parentId) content
+      liftIO $ pushEvent eventsRef event
 
-    get "/:nodeId" $ do
-      nodeId <- liftM NodeId (param "nodeId")
+    get "/:nodeId" $ \nodeId -> do
       events <- liftIO $ readIORef eventsRef
-      text . T.pack $
-        show events ++ "\n" ++
-        maybe "not found" (drawTree . stringTree)
-          (findNode nodeId (growTree events))
+      text . decodeUtf8 $
+        maybe (encode $ toJSON ("not found" :: String)) encode
+          (findNode (NodeId nodeId) (growTree events))
+      
+consumeNodeId :: IORef Integer -> IO Integer
+consumeNodeId = flip atomicModifyIORef (\n -> (n + 1, n))
+
+pushEvent :: IORef [Event] -> Event -> IO ()
+pushEvent es e = modifyIORef es (++ [e])
       
 stringTree :: Yggdrasil -> Tree String
 stringTree = fmap show
