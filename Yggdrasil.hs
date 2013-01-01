@@ -9,6 +9,9 @@ import Network.Wai.Middleware.Static
 
 import Network.HTTP.Types (status404)
 
+import Control.Concurrent.STM
+import Control.Concurrent.STM.TVar
+
 import Data.Monoid (mconcat)
 import Data.Foldable
 import Data.Tree
@@ -46,8 +49,8 @@ instance ToJSON NodeContent
 
 main = do
   nextNodeIdRef <- newIORef 1
-  eventsRef <- newIORef []
-
+  eventsRef <- newTVarIO []
+  
   scotty 3000 $ do
     
     middleware logStdoutDev
@@ -60,15 +63,16 @@ main = do
       liftIO $ pushEvent eventsRef event
 
     get "/:nodeId" $ \nodeId -> do
-      events <- liftIO $ readIORef eventsRef
+      events <- liftIO . atomically $ readTVar eventsRef
       maybe (status status404 >> text "not found") json
         (findNode (NodeId nodeId) (growTree events))
         
 consumeNodeId :: IORef Integer -> IO Integer
 consumeNodeId = flip atomicModifyIORef (\n -> (n + 1, n))
 
-pushEvent :: IORef [Event] -> Event -> IO ()
-pushEvent es e = modifyIORef es (++ [e])
+pushEvent :: TVar [a] -> a -> IO ()
+pushEvent var e = atomically $ 
+  readTVar var >>= \es -> writeTVar var (es ++ [e])
       
 stringTree :: Yggdrasil -> Tree String
 stringTree = fmap show
