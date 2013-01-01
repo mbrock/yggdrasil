@@ -2,3 +2,5 @@
 *.hi
 *.o
 Yggdrasil
+
+events.json
