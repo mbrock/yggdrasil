@@ -49,7 +49,7 @@ instance ToJSON Yggdrasil where
             "branches" .= map toJSON xs]
     
 main = do
-  nextNodeIdRef <- newIORef 1
+  nodeIdSupply <- newIORef 1
   eventStore <- initializeEventStore
   
   forkIO $ webSocketServer eventStore
@@ -60,19 +60,20 @@ main = do
     middleware static
   
     put "/:parentId" $ \parentId -> do
-      content <- liftM (NodeContent . decodeUtf8) body
-      nextNodeId <- liftIO $ (consumeNodeId nextNodeIdRef)
-      let event = NodeAdded (NodeId nextNodeId) (NodeId parentId) content
-      liftIO $ pushEvent eventStore event
+      content <- readContentFromRequestBody
+      nextNodeId <- takeNextNodeId nodeIdSupply
+      pushNodeAddedEvent eventStore nextNodeId parentId content
 
-    get "/:nodeId" $ \nodeId -> do
-      events <- liftIO $ getAllEvents eventStore
-      maybe (status status404 >> text "not found") json
-        (findNode (NodeId nodeId) (growTree events))
-        
-    get "/" $ do
-      redirect "/index.html"
-        
+    get "/" (redirect "/index.html")
+
+readContentFromRequestBody = liftM (NodeContent . decodeUtf8) body
+
+takeNextNodeId = liftIO . consumeNodeId
+
+pushNodeAddedEvent eventStore nodeId parentId content = 
+  liftIO $ pushEvent eventStore event
+  where event = NodeAdded (NodeId nodeId) (NodeId parentId) content
+
 data Client = Client { clientId :: Integer
                      , clientSink :: WS.Sink WS.Hybi00 }
               
