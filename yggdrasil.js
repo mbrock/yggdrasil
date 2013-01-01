@@ -2,16 +2,18 @@
 (function() {
 
   $(function() {
-    var addNode, makeLeafElement, makeReplyFunction, nodes, renderTree, socket;
+    var addNode, makeLeafElement, makeReplyFunction, nodes, socket;
     makeReplyFunction = function(id) {
       return function() {
         var content;
         content = window.prompt('Reply', 'Write your reply');
-        return $.ajax({
-          type: 'PUT',
-          url: "/" + id,
-          data: content
-        });
+        if (content !== null) {
+          return $.ajax({
+            type: 'PUT',
+            url: "/" + id,
+            data: content
+          });
+        }
       };
     };
     nodes = {};
@@ -31,20 +33,6 @@
       element: makeLeafElement(0, '')
     };
     $("body").append(nodes[0].element);
-    renderTree = function(tree) {
-      return $('<div/>').addClass('node').append($('<div/>').addClass('controls').append($('<a href="#"/>').text('⤸').click(makeReplyFunction(tree)))).append($('<div/>').addClass('content').text(tree.content)).append($('<div/>').addClass('branches').append([
-        (function() {
-          var _i, _len, _ref, _results;
-          _ref = tree.branches;
-          _results = [];
-          for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-            tree = _ref[_i];
-            _results.push(renderTree(tree)[0]);
-          }
-          return _results;
-        })()
-      ]));
-    };
     socket = new WebSocket("ws://" + location.hostname + ":9160");
     return socket.onopen = function(event) {
       return socket.onmessage = function(event) {

@@ -3,10 +3,11 @@ $ ->
   makeReplyFunction = (id) ->
     () ->
       content = window.prompt('Reply', 'Write your reply')
-      $.ajax
-        type: 'PUT'
-        url: "/#{id}"
-        data: content
+      if content isnt null
+        $.ajax
+          type: 'PUT'
+          url: "/#{id}"
+          data: content
 
   nodes = {}
 
@@ -31,5 +32,6 @@ $ ->
   socket = new WebSocket("ws://#{location.hostname}:9160")
   socket.onopen = (event) ->
     socket.onmessage = (event) ->
-      addNode (JSON.parse event.data)
+      [id, parentId, content] = JSON.parse event.data
+      addNode id, parentId, content
       
