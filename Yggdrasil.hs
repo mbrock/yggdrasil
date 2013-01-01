@@ -5,6 +5,7 @@ import Web.Scotty
 
 import Network.Wai
 import Network.Wai.Middleware.RequestLogger
+import Network.Wai.Middleware.Static
 
 import Network.HTTP.Types (status404)
 
@@ -50,6 +51,7 @@ main = do
   scotty 3000 $ do
     
     middleware logStdoutDev
+    middleware static
   
     put "/:parentId" $ \parentId -> do
       content <- liftM (NodeContent . decodeUtf8) body
