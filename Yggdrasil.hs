@@ -3,6 +3,9 @@
 
 import Web.Scotty
 
+import Network.Wai
+import Network.Wai.Middleware.RequestLogger
+
 import Data.Monoid (mconcat)
 import Data.Foldable
 import Data.Tree
@@ -43,6 +46,8 @@ main = do
   eventsRef <- newIORef []
 
   scotty 3000 $ do
+    
+    middleware logStdoutDev
   
     put "/:parentId" $ \parentId -> do
       content <- liftM (NodeContent . decodeUtf8) body
