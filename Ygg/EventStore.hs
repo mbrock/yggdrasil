@@ -1,5 +1,6 @@
 module Ygg.EventStore (
   EventStore,
+  EventChannel,
   
   initializeEventStore,
   pushEvent,
@@ -19,7 +20,9 @@ import Control.Monad.IO.Class (liftIO)
 import qualified Data.Aeson as JSON
 import qualified Data.ByteString.Lazy as BS
 
-data EventStore = EventStore (TVar [Event]) (TChan Event)
+type EventChannel = TChan Event
+
+data EventStore = EventStore (TVar [Event]) EventChannel
 
 eventLogPath = "events.json"
 
