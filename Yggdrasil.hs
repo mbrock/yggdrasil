@@ -1,6 +1,9 @@
 {-# LANGUAGE OverloadedStrings, TypeSynonymInstances, FlexibleInstances, 
              DeriveGeneric #-}
 
+import Ygg.Event
+import Ygg.EventStore
+
 import Web.Scotty (scotty, get, put, middleware, body,
                    text, json, status, redirect)
 
@@ -38,15 +41,6 @@ import Control.Monad.IO.Class (liftIO)
 
 import GHC.Generics
 
-newtype NodeId = NodeId Integer
-               deriving (Eq, Show, Generic)
-                        
-newtype NodeContent = NodeContent T.Text
-                    deriving (Eq, Show, Generic)
-
-data Event = NodeAdded NodeId NodeId NodeContent
-           deriving (Eq, Show, Generic)
-
 type Yggdrasil = Tree (NodeId, NodeContent)
 
 instance ToJSON Yggdrasil where
@@ -54,27 +48,11 @@ instance ToJSON Yggdrasil where
     object ["id" .= id, "content" .= content,
             "branches" .= map toJSON xs]
     
-instance ToJSON NodeId
-instance ToJSON NodeContent
-instance ToJSON Event
-instance FromJSON NodeId
-instance FromJSON NodeContent
-instance FromJSON Event
-
-eventLogPath = "events.json"
-
-saveEvents :: TVar [Event] -> IO ()
-saveEvents v = atomically (readTVar v) >>=
-               BS.writeFile eventLogPath . JSON.encode
-
 main = do
-  Just eventLog <- fmap JSON.decode (BS.readFile eventLogPath)
-  
   nextNodeIdRef <- newIORef 1
-  eventsRef <- newTVarIO eventLog
-  eventsChan <- newTChanIO
+  eventStore <- initializeEventStore
   
-  forkIO $ webSocketServer eventsRef eventsChan
+  forkIO $ webSocketServer eventStore
     
   scotty 3000 $ do
     
@@ -85,10 +63,10 @@ main = do
       content <- liftM (NodeContent . decodeUtf8) body
       nextNodeId <- liftIO $ (consumeNodeId nextNodeIdRef)
       let event = NodeAdded (NodeId nextNodeId) (NodeId parentId) content
-      liftIO $ pushEvent eventsChan eventsRef event
+      liftIO $ pushEvent eventStore event
 
     get "/:nodeId" $ \nodeId -> do
-      events <- liftIO . atomically $ readTVar eventsRef
+      events <- liftIO $ getAllEvents eventStore
       maybe (status status404 >> text "not found") json
         (findNode (NodeId nodeId) (growTree events))
         
@@ -110,23 +88,22 @@ broadcastEvent clients e = do
   forM_ (map clientSink $ ssClients clients)
     (flip WS.sendSink $ WS.textData $ decodeUtf8 $ JSON.encode e)
   
-webSocketServer :: TVar [Event] -> TChan Event -> IO ()
-webSocketServer events eventsChan = do
+webSocketServer :: EventStore -> IO ()
+webSocketServer eventStore = do
   state <- newMVar (ServerState [] 0)
   
   forkIO $ do
-    myEventChan <- atomically $ dupTChan eventsChan
+    myEventChan <- chanForNewEvents eventStore
     forever $ do
       e <- atomically $ readTChan myEventChan
       print e
       clients <- readMVar state
       broadcastEvent clients e
-      saveEvents events
   
-  WS.runServer "0.0.0.0" 9160 $ handleWebSocket events state
+  WS.runServer "0.0.0.0" 9160 $ handleWebSocket eventStore state
                                        
-handleWebSocket :: TVar [Event] -> MVar ServerState -> WS.Request -> WS.WebSockets WS.Hybi00 ()
-handleWebSocket events state rq = do
+handleWebSocket :: EventStore -> MVar ServerState -> WS.Request -> WS.WebSockets WS.Hybi00 ()
+handleWebSocket eventStore state rq = do
     WS.acceptRequest rq
     WS.getVersion >>= liftIO . putStrLn . ("Client version: " ++)
     newClientId <- fmap ssNextClientId (liftIO $ readMVar state)
@@ -135,7 +112,7 @@ handleWebSocket events state rq = do
     liftIO $ modifyMVar_ state
       (\ss -> return $ ss { ssClients = client : ssClients ss 
                           , ssNextClientId = newClientId + 1 })
-    es <- liftIO . atomically $ readTVar events
+    es <- liftIO $ getAllEvents eventStore
     
     catchDisconnect <- return (\e -> case fromException e of
       Just WS.ConnectionClosed -> liftIO $ removeClient state client
@@ -153,12 +130,6 @@ removeClient state sink = modifyMVar_ state f
 
 consumeNodeId :: IORef Integer -> IO Integer
 consumeNodeId = flip atomicModifyIORef (\n -> (n + 1, n))
-
-pushEvent :: TChan a -> TVar [a] -> a -> IO ()
-pushEvent chan var e = atomically $ do
-  es <- readTVar var
-  writeTVar var (es ++ [e])
-  writeTChan chan e
       
 stringTree :: Yggdrasil -> Tree String
 stringTree = fmap show
