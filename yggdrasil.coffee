@@ -5,7 +5,7 @@ $ ->
       content = window.prompt('Reply', 'Write your reply')
       $.ajax
         type: 'PUT'
-        url: "/#{tree.id}"
+        url: "/#{id}"
         data: content
 
   nodes = {}
