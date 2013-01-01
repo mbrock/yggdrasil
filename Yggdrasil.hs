@@ -59,10 +59,9 @@ main = do
 
     get "/:nodeId" $ \nodeId -> do
       events <- liftIO $ readIORef eventsRef
-      case findNode (NodeId nodeId) (growTree events) of
-        Nothing -> status status404 >> text "not found"
-        Just x -> json x
-      
+      maybe (status status404 >> text "not found") json
+        (findNode (NodeId nodeId) (growTree events))
+        
 consumeNodeId :: IORef Integer -> IO Integer
 consumeNodeId = flip atomicModifyIORef (\n -> (n + 1, n))
 
