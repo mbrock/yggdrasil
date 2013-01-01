@@ -28,14 +28,6 @@ $ ->
 
   $("body").append nodes[0].element
 
-  renderTree = (tree) ->
-    $('<div/>').addClass('node')
-      .append($('<div/>').addClass('controls')
-        .append($('<a href="#"/>').text('⤸').click(makeReplyFunction(tree))))
-      .append($('<div/>').addClass('content').text(tree.content))
-      .append($('<div/>').addClass('branches')
-        .append([renderTree(tree)[0] for tree in tree.branches]))
-  
   socket = new WebSocket("ws://#{location.hostname}:9160")
   socket.onopen = (event) ->
     socket.onmessage = (event) ->
