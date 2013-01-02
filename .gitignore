@@ -6,3 +6,5 @@ Yggdrasil
 events.json
 
 *.imports
+
+dist/*

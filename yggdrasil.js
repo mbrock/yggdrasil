@@ -7,13 +7,14 @@
       return function() {
         var content;
         content = window.prompt('Reply', 'Write your reply');
-        if (content !== null) {
-          return $.ajax({
+        if (content != null) {
+          $.ajax({
             type: 'PUT',
             url: "/" + id,
             data: content
           });
         }
+        return false;
       };
     };
     nodes = {};
