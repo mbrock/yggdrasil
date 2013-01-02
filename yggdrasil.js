@@ -2,16 +2,30 @@
 (function() {
 
   $(function() {
-    var addNode, makeLeafElement, makeReplyFunction, nodes;
-    makeReplyFunction = function(id) {
+    var addNode, makeLeafElement, makeReplyFunction, nodes, toggleReply;
+    toggleReply = function(element) {
+      return function() {
+        var form;
+        form = element.find('form :first');
+        form.toggle();
+        if (form.is(':visible')) {
+          $('textarea', form).focus();
+        }
+        return false;
+      };
+    };
+    makeReplyFunction = function(id, element) {
       return function() {
         var content;
-        content = window.prompt('Reply', 'Write your reply');
+        content = $('textarea', element).val();
         if (content != null) {
           $.ajax({
             type: 'PUT',
             url: "/" + id,
-            data: content
+            data: content,
+            success: function() {
+              return $('form', element).hide();
+            }
           });
         }
         return false;
@@ -28,7 +42,9 @@
       return parent.element.append(element);
     };
     makeLeafElement = function(id, content) {
-      return $('<div/>').addClass('node').append($('<div/>').addClass('controls').append($('<a href="#"/>').text('⤸').click(makeReplyFunction(id)))).append($('<div/>').addClass('content').text(content)).append($('<div/>').addClass('branches'));
+      var element;
+      element = $('<div/>');
+      return element.addClass('node').append($('<div/>').addClass('controls').append($('<a href="#"/>').text('⤸').click(toggleReply(element)))).append($('<div/>').addClass('content').text(content)).append($('<form>').addClass('reply').append($('<textarea name="text" placeholder="Your reply...">').attr('rows', 5).attr('cols', 50)).append($('<input type="submit" value="Reply">')).submit(makeReplyFunction(id, element)).hide());
     };
     nodes['0'] = {
       element: makeLeafElement(0, '')

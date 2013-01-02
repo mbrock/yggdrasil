@@ -1,12 +1,21 @@
 $ ->
 
-  makeReplyFunction = (id) -> () ->
-    content = window.prompt 'Reply', 'Write your reply'
+  toggleReply = (element) -> () ->
+    form = element.find 'form :first'
+    form.toggle()
+    if form.is(':visible')
+      $('textarea', form).focus()
+    false
+
+  makeReplyFunction = (id, element) -> () ->
+    content = $('textarea', element).val()
     if content?
       $.ajax
         type: 'PUT'
         url: "/#{id}"
         data: content
+        success: ->
+          $('form', element).hide()
     false
 
   nodes = {}
@@ -15,14 +24,20 @@ $ ->
     parent = nodes[parentId]
     element = makeLeafElement id, content
     nodes[id] = element: element
-    parent.element.append element
+    parent.element.append(element)
 
   makeLeafElement = (id, content) ->
-    $('<div/>').addClass('node')
+    element = $ '<div/>'
+    element.addClass('node')
       .append($('<div/>').addClass('controls')
-        .append($('<a href="#"/>').text('⤸').click(makeReplyFunction(id))))
+        .append($('<a href="#"/>').text('⤸').click(toggleReply(element))))
       .append($('<div/>').addClass('content').text(content))
-      .append($('<div/>').addClass('branches'))
+      .append($('<form>').addClass('reply')
+        .append($('<textarea name="text" placeholder="Your reply...">')
+          .attr('rows', 5).attr('cols', 50))
+        .append($ '<input type="submit" value="Reply">')
+        .submit(makeReplyFunction(id, element))
+        .hide())
 
   nodes['0'] = element: makeLeafElement 0, ''
 
