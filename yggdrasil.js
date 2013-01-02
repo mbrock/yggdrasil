@@ -2,7 +2,7 @@
 (function() {
 
   $(function() {
-    var addNode, makeLeafElement, makeReplyFunction, nodes, socket;
+    var addNode, makeLeafElement, makeReplyFunction, nodes;
     makeReplyFunction = function(id) {
       return function() {
         var content;
@@ -34,14 +34,19 @@
       element: makeLeafElement(0, '')
     };
     $("body").append(nodes[0].element);
-    socket = new WebSocket("ws://" + location.hostname + ":8080");
-    return socket.onopen = function(event) {
-      return socket.onmessage = function(event) {
-        var content, id, parentId, _ref;
-        _ref = JSON.parse(event.data), id = _ref[0], parentId = _ref[1], content = _ref[2];
-        return addNode(id, parentId, content);
+    return $.getJSON("/history", function(data) {
+      var event, socket, _i, _len;
+      for (_i = 0, _len = data.length; _i < _len; _i++) {
+        event = data[_i];
+        addNode.apply(null, event);
+      }
+      socket = new WebSocket("ws://" + location.hostname + ":8080");
+      return socket.onopen = function(event) {
+        return socket.onmessage = function(event) {
+          return addNode.apply(null, JSON.parse(event.data));
+        };
       };
-    };
+    });
   });
 
 }).call(this);

@@ -28,9 +28,11 @@ $ ->
 
   $("body").append nodes[0].element
 
-  socket = new WebSocket("ws://#{location.hostname}:8080")
-  socket.onopen = (event) ->
-    socket.onmessage = (event) ->
-      [id, parentId, content] = JSON.parse event.data
-      addNode id, parentId, content
+  $.getJSON "/history", (data) ->
+    addNode event... for event in data
+
+    socket = new WebSocket("ws://#{location.hostname}:8080")
+    socket.onopen = (event) ->
+      socket.onmessage = (event) ->
+        addNode (JSON.parse event.data)...
       

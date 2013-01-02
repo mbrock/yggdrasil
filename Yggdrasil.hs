@@ -3,11 +3,11 @@
 
 import Ygg.Event (NodeId(..), NodeContent(..), Event(NodeAdded))
 import Ygg.EventStore
-    (EventStore, pushEvent, initializeEventStore)
+    (EventStore, pushEvent, initializeEventStore, getAllEvents)
     
 import qualified Ygg.WebSocketServer (start)
 
-import Web.Scotty (put, get, redirect, body, scotty, middleware)
+import Web.Scotty (put, get, redirect, body, scotty, middleware, json)
 import Network.Wai.Middleware.RequestLogger (logStdoutDev)
 import Network.Wai.Middleware.Static (static)
 
@@ -36,6 +36,9 @@ main = do
       content <- readContentFromRequestBody
       id <- takeNextNodeId nodeIdSupply
       liftIO $ pushNodeAddedEvent eventStore id (NodeId parentId) content
+
+    get "/history" $ do
+      liftIO (getAllEvents eventStore) >>= json
 
     get "/" (redirect "/index.html")
 
