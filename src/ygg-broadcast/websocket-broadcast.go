@@ -109,15 +109,16 @@ func (h *hub) runAmqpListener() {
 
 	log.Print("Connected to AMQP queue")
 
-	go handle(deliveries)
+	go h.handle(deliveries)
 }
 	
-func handle(deliveries <-chan amqp.Delivery) {
+func (h *hub) handle(deliveries <-chan amqp.Delivery) {
 	for d := range deliveries {
 		log.Printf("got %dB: [%v] %s",
 			len(d.Body),
 			d.DeliveryTag,
 			d.Body)
+		h.broadcast <- string(d.Body)
 	}
 }
 
