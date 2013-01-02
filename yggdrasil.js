@@ -34,7 +34,7 @@
       element: makeLeafElement(0, '')
     };
     $("body").append(nodes[0].element);
-    socket = new WebSocket("ws://" + location.hostname + ":9160");
+    socket = new WebSocket("ws://" + location.hostname + ":8080");
     return socket.onopen = function(event) {
       return socket.onmessage = function(event) {
         var content, id, parentId, _ref;
