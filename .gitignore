@@ -10,3 +10,4 @@ events.json
 dist/*
 bin/*
 pkg
+.DS_Store
