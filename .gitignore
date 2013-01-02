@@ -8,3 +8,5 @@ events.json
 *.imports
 
 dist/*
+bin/*
+pkg
