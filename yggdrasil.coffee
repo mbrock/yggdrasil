@@ -1,6 +1,8 @@
 $ ->
 
   class Node extends Backbone.Model
+    addBranch: (node) =>
+      this.trigger 'new-child', node
 
   class NodeView extends Backbone.View
     className: 'node'
@@ -9,6 +11,9 @@ $ ->
     initialize: =>
       _.bindAll @
       @render()
+      @model.on 'new-child', (child) =>
+        childView = new NodeView model: child
+        @$el.append childView.el
 
     render: =>
       @$el.append @template(@model.toJSON())
@@ -39,18 +44,16 @@ $ ->
 
   addNode = (id, parentId, content) ->
     parent = nodes[parentId]
-    element = makeLeafElement id, content
-    nodes[id] = element: element
-    parent.element.append(element)
+    leaf = makeLeaf id, content
+    nodes[id] = leaf
+    parent.addBranch leaf
 
-  makeLeafElement = (id, content) ->
-    node = new Node id: id, content: content
-    view = new NodeView model: node
-    view.$el
+  makeLeaf = (id, content) ->
+    new Node id: id, content: content
 
-  nodes['0'] = element: makeLeafElement 0, ''
-
-  $("#tree").append nodes[0].element
+  rootNode = makeLeaf 0, ''
+  $("#tree").append(new NodeView(model: rootNode).el)
+  nodes['0'] = rootNode
 
   $.getJSON "/history", (data) ->
     addNode event... for event in data
