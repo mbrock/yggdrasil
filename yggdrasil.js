@@ -130,20 +130,21 @@
 
     })(Backbone.View);
     nodes = {};
-    addNode = function(id, parentId, content) {
+    addNode = function(nodeInfo) {
       var leaf, parent;
-      parent = nodes[parentId];
-      leaf = makeLeaf(id, content);
-      nodes[id] = leaf;
+      parent = nodes[nodeInfo.parentId];
+      leaf = makeLeaf(nodeInfo.id, nodeInfo.content, nodeInfo.userId);
+      nodes[nodeInfo.id] = leaf;
       return parent.addBranch(leaf);
     };
-    makeLeaf = function(id, content) {
+    makeLeaf = function(id, content, username) {
       return new Node({
         id: id,
-        content: content
+        content: content,
+        username: username
       });
     };
-    rootNode = makeLeaf(0, '');
+    rootNode = makeLeaf(0, '', 'yggdrasil');
     $("#tree").append(new NodeView({
       model: rootNode
     }).el);
@@ -154,12 +155,12 @@
       var event, socket, _i, _len;
       for (_i = 0, _len = data.length; _i < _len; _i++) {
         event = data[_i];
-        addNode.apply(null, event);
+        addNode(event);
       }
       socket = new WebSocket("ws://" + location.hostname + ":8080");
       return socket.onopen = function(event) {
         return socket.onmessage = function(event) {
-          return addNode.apply(null, JSON.parse(event.data));
+          return addNode(JSON.parse(event.data));
         };
       };
     });

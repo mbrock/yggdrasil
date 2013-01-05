@@ -17,6 +17,15 @@
         border-radius: 3px;
       }
 
+      .node-header {
+        background-color: #eff;
+        border-bottom: 1px solid #aaa;
+      }
+
+      .node-username {
+        margin-left: 1em;
+      }
+
       .node-controls {
         float: right;
         padding: 10px;
@@ -59,6 +68,11 @@
     </style>
 
     <script type="text/template" id="node-template">
+      <div class="node-header">
+        <span class="node-username">
+          <%- username %>
+        </span>
+      </div>
       <div class="node-controls">
         <a href="#" class="node-reply-link">⤸</a>
       </div>

@@ -1,7 +1,7 @@
 {-# LANGUAGE OverloadedStrings, TypeSynonymInstances, FlexibleInstances, 
              DeriveGeneric, ScopedTypeVariables #-}
 
-import Ygg.Event (NodeId(..), NodeContent(..), Event(NodeAdded))
+import Ygg.Event (UserId(..), NodeId(..), NodeContent(..), Event(NodeAdded))
 import Ygg.EventStore
     (EventStore, pushEvent, initializeEventStore, getAllEvents)
     
@@ -51,13 +51,15 @@ main = do
     post "/:parentId" $ \parentId -> do
       content <- readContent
       sessionId <- readSessionId
+      username <- liftIO $ liftM (Map.! sessionId) (readMVar sessionMap)
       id <- takeNextNodeId nodeIdSupply
       liftIO $ pushNodeAddedEvent eventStore id (NodeId parentId)
-                 (NodeContent $ T.pack $ content ++ " (" ++ sessionId ++ ")")
+                 (NodeContent $ T.pack $ content)
+                 (UserId username)
 
     get "/history" $ do
       liftIO (getAllEvents eventStore) >>= json
-      
+
     post "/login/:username" $ \(username :: String) -> do
       sessionId <- liftIO $ fmap UUID.toString UUIDV4.nextRandom
       liftIO $ addUserSession sessionMap sessionId username
@@ -70,9 +72,10 @@ readSessionId = param $ T.pack "sessionId"
 
 takeNextNodeId = liftIO . consumeNodeId
 
-pushNodeAddedEvent :: EventStore -> NodeId -> NodeId -> NodeContent -> IO ()
-pushNodeAddedEvent es id id' c = 
-  liftIO $ pushEvent es (NodeAdded id id' c)
+pushNodeAddedEvent :: EventStore -> NodeId -> NodeId -> NodeContent 
+                      -> UserId -> IO ()
+pushNodeAddedEvent es id id' c userId = 
+  liftIO $ pushEvent es (NodeAdded id id' c userId)
 
 consumeNodeId :: IORef Integer -> IO NodeId
 consumeNodeId r = fmap NodeId $ atomicModifyIORef r (\n -> (n + 1, n))

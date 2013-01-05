@@ -54,16 +54,16 @@ $ ->
   
   nodes = {}
 
-  addNode = (id, parentId, content) ->
-    parent = nodes[parentId]
-    leaf = makeLeaf id, content
-    nodes[id] = leaf
+  addNode = (nodeInfo) ->
+    parent = nodes[nodeInfo.parentId]
+    leaf = makeLeaf nodeInfo.id, nodeInfo.content, nodeInfo.userId
+    nodes[nodeInfo.id] = leaf
     parent.addBranch leaf
 
-  makeLeaf = (id, content) ->
-    new Node id: id, content: content
+  makeLeaf = (id, content, username) ->
+    new Node id: id, content: content, username: username
 
-  rootNode = makeLeaf 0, ''
+  rootNode = makeLeaf 0, '', 'yggdrasil'
   $("#tree").append(new NodeView(model: rootNode).el)
   nodes['0'] = rootNode
 
@@ -71,12 +71,12 @@ $ ->
   document.yggdrasil = app
 
   $.getJSON "/history", (data) ->
-    addNode event... for event in data
+    addNode event for event in data
 
     socket = new WebSocket("ws://#{location.hostname}:8080")
     socket.onopen = (event) ->
       socket.onmessage = (event) ->
-        addNode (JSON.parse event.data)...
+        addNode (JSON.parse event.data)
 
   $("#login-container button").click ->
     username = $("#login-container input").val()
