@@ -25,7 +25,8 @@ $ ->
       @$el.append childView.el
 
     render: =>
-      @$el.append @template(@model.toJSON())
+      htmlContent = new Showdown.converter().makeHtml(@model.get('content'))
+      @$el.append @template(_.extend(@model.toJSON(), htmlContent: htmlContent))
       @replyForm = @$el.children('.node-reply-form')
       @replyForm.hide()
 

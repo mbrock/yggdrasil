@@ -87,7 +87,11 @@
       };
 
       NodeView.prototype.render = function() {
-        this.$el.append(this.template(this.model.toJSON()));
+        var htmlContent;
+        htmlContent = new Showdown.converter().makeHtml(this.model.get('content'));
+        this.$el.append(this.template(_.extend(this.model.toJSON(), {
+          htmlContent: htmlContent
+        })));
         this.replyForm = this.$el.children('.node-reply-form');
         this.replyForm.hide();
         $('.node-reply-link', this.$el).click(this.toggleReplyForm);
