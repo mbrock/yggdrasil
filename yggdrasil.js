@@ -5,23 +5,42 @@
     __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
 
   $(function() {
-    var Node, NodeView, addNode, finishLoggingInAs, makeLeaf, nodes, rootNode;
+    var Branches, Node, NodeView, addNode, finishLoggingInAs, makeLeaf, nodes, rootNode;
     Node = (function(_super) {
 
       __extends(Node, _super);
 
       function Node() {
         this.addBranch = __bind(this.addBranch, this);
+
+        this.initialize = __bind(this.initialize, this);
         return Node.__super__.constructor.apply(this, arguments);
       }
 
+      Node.prototype.initialize = function() {
+        return this.branches = new Branches;
+      };
+
       Node.prototype.addBranch = function(node) {
-        return this.trigger('new-child', node);
+        return this.branches.add(node);
       };
 
       return Node;
 
     })(Backbone.Model);
+    Branches = (function(_super) {
+
+      __extends(Branches, _super);
+
+      function Branches() {
+        return Branches.__super__.constructor.apply(this, arguments);
+      }
+
+      Branches.prototype.model = Node;
+
+      return Branches;
+
+    })(Backbone.Collection);
     NodeView = (function(_super) {
 
       __extends(NodeView, _super);
@@ -33,6 +52,8 @@
 
         this.render = __bind(this.render, this);
 
+        this.addChild = __bind(this.addChild, this);
+
         this.initialize = __bind(this.initialize, this);
         return NodeView.__super__.constructor.apply(this, arguments);
       }
@@ -42,16 +63,16 @@
       NodeView.prototype.template = _.template($('#node-template').html());
 
       NodeView.prototype.initialize = function() {
-        var _this = this;
-        _.bindAll(this);
         this.render();
-        return this.model.on('new-child', function(child) {
-          var childView;
-          childView = new NodeView({
-            model: child
-          });
-          return _this.$el.append(childView.el);
+        return this.model.branches.on('add', this.addChild);
+      };
+
+      NodeView.prototype.addChild = function(child) {
+        var childView;
+        childView = new NodeView({
+          model: child
         });
+        return this.$el.append(childView.el);
       };
 
       NodeView.prototype.render = function() {

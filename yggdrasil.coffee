@@ -1,19 +1,26 @@
 $ ->
 
   class Node extends Backbone.Model
+    initialize: =>
+      @branches = new Branches
+      
     addBranch: (node) =>
-      this.trigger 'new-child', node
+      @branches.add node
+
+  class Branches extends Backbone.Collection
+    model: Node
 
   class NodeView extends Backbone.View
     className: 'node'
     template: _.template $('#node-template').html()
 
     initialize: =>
-      _.bindAll @
       @render()
-      @model.on 'new-child', (child) =>
-        childView = new NodeView model: child
-        @$el.append childView.el
+      @model.branches.on 'add', @addChild
+
+    addChild: (child) =>
+      childView = new NodeView model: child
+      @$el.append childView.el
 
     render: =>
       @$el.append @template(@model.toJSON())
