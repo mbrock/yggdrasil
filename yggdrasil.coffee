@@ -1,5 +1,7 @@
 $ ->
 
+  class App extends Backbone.Model
+
   class Node extends Backbone.Model
     initialize: =>
       @branches = new Branches
@@ -38,11 +40,13 @@ $ ->
 
     submitReply: =>
       content = $('textarea', @replyForm).val()
-      if content?
+      if content? and app.get('sessionId')?
         $.ajax
-          type: 'PUT'
+          type: 'POST'
           url: "/#{@model.get('id')}"
-          data: content
+          data:
+            content: content
+            sessionId: app.get('sessionId')
           success: =>
             @replyForm.hide()
       false
@@ -62,6 +66,9 @@ $ ->
   $("#tree").append(new NodeView(model: rootNode).el)
   nodes['0'] = rootNode
 
+  app = new App
+  document.yggdrasil = app
+
   $.getJSON "/history", (data) ->
     addNode event... for event in data
 
@@ -74,13 +81,15 @@ $ ->
     username = $("#login-container input").val()
     $.ajax
       type: 'POST'
+      dataType: 'json'
       url: "/login/#{username}"
-      success: ->
-        finishLoggingInAs username
+      success: (sessionId) ->
+        finishLoggingInAs username, sessionId
     false
 
-  finishLoggingInAs = (username) ->
+  finishLoggingInAs = (username, sessionId) ->
     $("#login-container").empty()
     $("#login-container").append(
       $("<p class=\"navbar-text\">Logged in as <i>#{username}</i></p>"))
-    
+      
+    app.set('sessionId', sessionId)

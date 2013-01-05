@@ -8,23 +8,38 @@ import Ygg.EventStore
 import qualified Ygg.WebSocketServer
     
 import Web.Scotty (put, post, get, redirect, body, scotty, middleware,
-                   json, text)
+                   json, text, param)
 import Network.Wai.Middleware.RequestLogger (logStdoutDev)
 import Network.Wai.Middleware.Static (static)
 
+import qualified Data.UUID as UUID
+import qualified Data.UUID.V4 as UUIDV4
+
 import Control.Concurrent (forkIO)
+import Control.Concurrent.MVar
+
 import Control.Monad (liftM)
 import Control.Monad.IO.Class (liftIO)
 
 import Data.IORef (IORef, newIORef, atomicModifyIORef)
 
+import Data.Map (Map)
+import qualified Data.Map as Map
+
 import Data.Text.Lazy.Encoding (decodeUtf8)
+
+import qualified Data.Text.Lazy as T
 
 defaultPort = 3000
 
+addUserSession :: MVar (Map String String) -> String -> String -> IO ()
+addUserSession map k v =
+  modifyMVar_ map (return . Map.insert k v)
+  
 main = do
   nodeIdSupply <- newIORef 1
   eventStore <- initializeEventStore
+  sessionMap <- newMVar Map.empty
   
   forkIO $ Ygg.WebSocketServer.start eventStore
   
@@ -33,20 +48,25 @@ main = do
     middleware logStdoutDev
     middleware static
   
-    put "/:parentId" $ \parentId -> do
-      content <- readContentFromRequestBody
+    post "/:parentId" $ \parentId -> do
+      content <- readContent
+      sessionId <- readSessionId
       id <- takeNextNodeId nodeIdSupply
-      liftIO $ pushNodeAddedEvent eventStore id (NodeId parentId) content
+      liftIO $ pushNodeAddedEvent eventStore id (NodeId parentId)
+                 (NodeContent $ T.pack $ content ++ " (" ++ sessionId ++ ")")
 
     get "/history" $ do
       liftIO (getAllEvents eventStore) >>= json
       
     post "/login/:username" $ \(username :: String) -> do
-      text "OK!"
+      sessionId <- liftIO $ fmap UUID.toString UUIDV4.nextRandom
+      liftIO $ addUserSession sessionMap sessionId username
+      json sessionId
 
     get "/" (redirect "/index.html")
 
-readContentFromRequestBody = liftM (NodeContent . decodeUtf8) body
+readContent = param $ T.pack "content"
+readSessionId = param $ T.pack "sessionId"
 
 takeNextNodeId = liftIO . consumeNodeId
 
