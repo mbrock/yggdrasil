@@ -41,7 +41,7 @@ $ ->
 
   nodes['0'] = element: makeLeafElement 0, ''
 
-  $("body").append nodes[0].element
+  $("#tree").append nodes[0].element
 
   $.getJSON "/history", (data) ->
     addNode event... for event in data

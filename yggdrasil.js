@@ -49,7 +49,7 @@
     nodes['0'] = {
       element: makeLeafElement(0, '')
     };
-    $("body").append(nodes[0].element);
+    $("#tree").append(nodes[0].element);
     return $.getJSON("/history", function(data) {
       var event, socket, _i, _len;
       for (_i = 0, _len = data.length; _i < _len; _i++) {
