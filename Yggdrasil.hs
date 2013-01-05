@@ -5,8 +5,6 @@ import Ygg.Event (NodeId(..), NodeContent(..), Event(NodeAdded))
 import Ygg.EventStore
     (EventStore, pushEvent, initializeEventStore, getAllEvents)
     
-import qualified Ygg.WebSocketServer (start)
-
 import Web.Scotty (put, get, redirect, body, scotty, middleware, json)
 import Network.Wai.Middleware.RequestLogger (logStdoutDev)
 import Network.Wai.Middleware.Static (static)
@@ -25,8 +23,6 @@ main = do
   nodeIdSupply <- newIORef 1
   eventStore <- initializeEventStore
   
-  forkIO $ Ygg.WebSocketServer.start eventStore
-    
   scotty defaultPort $ do
     
     middleware logStdoutDev
