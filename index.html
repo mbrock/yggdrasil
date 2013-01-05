@@ -11,23 +11,23 @@
         padding-top: 60px;
       }
 
-      div.content {
+      .node-content {
         background-color: #ffe;
         padding: 10px;
         border-radius: 3px;
       }
 
-      div.controls {
+      .node-controls {
         float: right;
         padding: 10px;
       }
 
-      div.controls a {
+      .node-controls a {
         color: #888;
         text-decoration: none;
       }
 
-      div.node {
+      .node {
         overflow: auto;
 
         margin: 10px;
@@ -39,7 +39,7 @@
         box-shadow: 3px 3px 1px #ccc;
       }
 
-      .reply {
+      .node-reply-form {
         overflow: auto;
 
         margin: 10px;
@@ -53,11 +53,25 @@
         border-radius: 3px;
       }
 
-      .reply input[type="submit"] {
+      .node-reply-form input[type="submit"] {
         display: block;
       }
-
     </style>
+
+    <script type="text/template" id="node-template">
+      <div class="node-controls">
+        <a href="#" class="node-reply-link">⤸</a>
+      </div>
+      <div class="node-content">
+        <%= content %>
+      </div>
+      <form class="node-reply-form">
+        <textarea name="text" placeholder="Your reply..."
+                  rows="5" cols="5"></textarea>
+        <input type="submit" value="Reply"/>
+      </form>
+    </script>
+
   </head>
   <body>
     <div class="navbar navbar-inverse navbar-fixed-top">
@@ -90,10 +104,12 @@
     </div>
 
     <script src="http://use.edgefonts.net/pt-serif.js"></script>
-    <script src="//netdna.bootstrapcdn.com/twitter-bootstrap/2.2.2/js/bootstrap.min.js"></script>
     <script src="http://code.jquery.com/jquery-1.8.3.js"></script>
-    <script src="//cdnjs.cloudflare.com/ajax/libs/d3/3.0.1/d3.v3.min.js"></script>
     <script src="//cdnjs.cloudflare.com/ajax/libs/json3/3.2.4/json3.js"></script>
+    <script src="http://underscorejs.org/underscore.js"></script>
+    <script src="http://backbonejs.org/backbone.js"></script>
+    <script src="//netdna.bootstrapcdn.com/twitter-bootstrap/2.2.2/js/bootstrap.min.js"></script>
+    <script src="//cdnjs.cloudflare.com/ajax/libs/d3/3.0.1/d3.v3.min.js"></script>
     <script src="yggdrasil.js"></script>
   </body>
 </html>

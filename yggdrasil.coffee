@@ -1,23 +1,40 @@
 $ ->
 
-  toggleReply = (element) -> () ->
-    form = element.find 'form :first'
-    form.toggle()
-    if form.is(':visible')
-      $('textarea', form).focus()
-    false
+  class Node extends Backbone.Model
 
-  makeReplyFunction = (id, element) -> () ->
-    content = $('textarea', element).val()
-    if content?
-      $.ajax
-        type: 'PUT'
-        url: "/#{id}"
-        data: content
-        success: ->
-          $('form', element).hide()
-    false
+  class NodeView extends Backbone.View
+    className: 'node'
+    template: _.template $('#node-template').html()
 
+    initialize: =>
+      _.bindAll @
+      @render()
+
+    render: =>
+      @$el.append @template(@model.toJSON())
+      @replyForm = @$el.children('.node-reply-form')
+      @replyForm.hide()
+
+      $('.node-reply-link', @$el).click @toggleReplyForm
+      @replyForm.submit @submitReply
+
+    toggleReplyForm: =>
+      @replyForm.toggle()
+      if @replyForm.is(':visible')
+        $('textarea', @replyForm).focus()
+      false
+
+    submitReply: =>
+      content = $('textarea', @replyForm).val()
+      if content?
+        $.ajax
+          type: 'PUT'
+          url: "/#{@model.get('id')}"
+          data: content
+          success: =>
+            @replyForm.hide()
+      false
+  
   nodes = {}
 
   addNode = (id, parentId, content) ->
@@ -27,17 +44,9 @@ $ ->
     parent.element.append(element)
 
   makeLeafElement = (id, content) ->
-    element = $ '<div/>'
-    element.addClass('node')
-      .append($('<div/>').addClass('controls')
-        .append($('<a href="#"/>').text('⤸').click(toggleReply(element))))
-      .append($('<div/>').addClass('content').text(content))
-      .append($('<form>').addClass('reply')
-        .append($('<textarea name="text" placeholder="Your reply...">')
-          .attr('rows', 5).attr('cols', 50))
-        .append($ '<input type="submit" value="Reply">')
-        .submit(makeReplyFunction(id, element))
-        .hide())
+    node = new Node id: id, content: content
+    view = new NodeView model: node
+    view.$el
 
   nodes['0'] = element: makeLeafElement 0, ''
 
