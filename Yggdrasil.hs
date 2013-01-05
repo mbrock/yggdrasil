@@ -1,11 +1,12 @@
 {-# LANGUAGE OverloadedStrings, TypeSynonymInstances, FlexibleInstances, 
-             DeriveGeneric #-}
+             DeriveGeneric, ScopedTypeVariables #-}
 
 import Ygg.Event (NodeId(..), NodeContent(..), Event(NodeAdded))
 import Ygg.EventStore
     (EventStore, pushEvent, initializeEventStore, getAllEvents)
     
-import Web.Scotty (put, get, redirect, body, scotty, middleware, json)
+import Web.Scotty (put, post, get, redirect, body, scotty, middleware,
+                   json, text)
 import Network.Wai.Middleware.RequestLogger (logStdoutDev)
 import Network.Wai.Middleware.Static (static)
 
@@ -35,6 +36,9 @@ main = do
 
     get "/history" $ do
       liftIO (getAllEvents eventStore) >>= json
+      
+    post "/login/:username" $ \(username :: String) -> do
+      text "OK!"
 
     get "/" (redirect "/index.html")
 

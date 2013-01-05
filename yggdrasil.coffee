@@ -50,4 +50,18 @@ $ ->
     socket.onopen = (event) ->
       socket.onmessage = (event) ->
         addNode (JSON.parse event.data)...
-      
+
+  $("#login-container button").click ->
+    username = $("#login-container input").val()
+    $.ajax
+      type: 'POST'
+      url: "/login/#{username}"
+      success: ->
+        finishLoggingInAs username
+    false
+
+  finishLoggingInAs = (username) ->
+    $("#login-container").empty()
+    $("#login-container").append(
+      $("<p class=\"navbar-text\">Logged in as <i>#{username}</i></p>"))
+    

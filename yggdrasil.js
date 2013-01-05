@@ -2,7 +2,7 @@
 (function() {
 
   $(function() {
-    var addNode, makeLeafElement, makeReplyFunction, nodes, toggleReply;
+    var addNode, finishLoggingInAs, makeLeafElement, makeReplyFunction, nodes, toggleReply;
     toggleReply = function(element) {
       return function() {
         var form;
@@ -50,7 +50,7 @@
       element: makeLeafElement(0, '')
     };
     $("#tree").append(nodes[0].element);
-    return $.getJSON("/history", function(data) {
+    $.getJSON("/history", function(data) {
       var event, socket, _i, _len;
       for (_i = 0, _len = data.length; _i < _len; _i++) {
         event = data[_i];
@@ -63,6 +63,22 @@
         };
       };
     });
+    $("#login-container button").click(function() {
+      var username;
+      username = $("#login-container input").val();
+      $.ajax({
+        type: 'POST',
+        url: "/login/" + username,
+        success: function() {
+          return finishLoggingInAs(username);
+        }
+      });
+      return false;
+    });
+    return finishLoggingInAs = function(username) {
+      $("#login-container").empty();
+      return $("#login-container").append($("<p class=\"navbar-text\">Logged in as <i>" + username + "</i></p>"));
+    };
   });
 
 }).call(this);
