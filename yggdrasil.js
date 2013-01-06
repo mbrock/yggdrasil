@@ -22,6 +22,8 @@
       __extends(Node, _super);
 
       function Node() {
+        this.lastNode = __bind(this.lastNode, this);
+
         this.addBranch = __bind(this.addBranch, this);
 
         this.initialize = __bind(this.initialize, this);
@@ -29,11 +31,25 @@
       }
 
       Node.prototype.initialize = function() {
-        return this.branches = new Branches;
+        var parent;
+        this.branches = new Branches;
+        if (parent = this.get('parent')) {
+          return this.set('level', parent.get('level') + 1);
+        } else {
+          return this.set('level', 0);
+        }
       };
 
       Node.prototype.addBranch = function(node) {
         return this.branches.add(node);
+      };
+
+      Node.prototype.lastNode = function() {
+        if (this.branches.isEmpty()) {
+          return this;
+        } else {
+          return this.branches.last().lastNode();
+        }
       };
 
       return Node;
@@ -44,10 +60,16 @@
       __extends(Branches, _super);
 
       function Branches() {
+        this.add = __bind(this.add, this);
         return Branches.__super__.constructor.apply(this, arguments);
       }
 
       Branches.prototype.model = Node;
+
+      Branches.prototype.add = function(child) {
+        this.trigger('before-add', child);
+        return Branches.__super__.add.call(this, child);
+      };
 
       return Branches;
 
@@ -60,6 +82,8 @@
         this.submitReply = __bind(this.submitReply, this);
 
         this.toggleReplyForm = __bind(this.toggleReplyForm, this);
+
+        this.setIndent = __bind(this.setIndent, this);
 
         this.render = __bind(this.render, this);
 
@@ -75,7 +99,8 @@
 
       NodeView.prototype.initialize = function() {
         this.render();
-        return this.model.branches.on('add', this.addChild);
+        this.model.view = this;
+        return this.model.branches.on('before-add', this.addChild);
       };
 
       NodeView.prototype.addChild = function(child) {
@@ -83,7 +108,7 @@
         childView = new NodeView({
           model: child
         });
-        return this.$el.append(childView.el);
+        return this.model.lastNode().view.$el.after(childView.$el);
       };
 
       NodeView.prototype.render = function() {
@@ -92,10 +117,15 @@
         this.$el.append(this.template(_.extend(this.model.toJSON(), {
           htmlContent: htmlContent
         })));
+        this.setIndent();
         this.replyForm = this.$el.children('.node-reply-form');
         this.replyForm.hide();
         $('.node-reply-link', this.$el).click(this.toggleReplyForm);
         return this.replyForm.submit(this.submitReply);
+      };
+
+      NodeView.prototype.setIndent = function() {
+        return this.$el.css('margin-left', "" + (this.model.get('level')) + "em");
       };
 
       NodeView.prototype.toggleReplyForm = function() {
@@ -113,7 +143,7 @@
         if ((content != null) && (app.get('sessionId') != null)) {
           $.ajax({
             type: 'POST',
-            url: "/" + (this.model.get('id')),
+            url: "/" + (this.model.get('nodeId')),
             data: {
               content: content,
               sessionId: app.get('sessionId')
@@ -133,18 +163,19 @@
     addNode = function(nodeInfo) {
       var leaf, parent;
       parent = nodes[nodeInfo.parentId];
-      leaf = makeLeaf(nodeInfo.nodeId, nodeInfo.content, nodeInfo.userId);
+      leaf = makeLeaf(parent, nodeInfo.nodeId, nodeInfo.content, nodeInfo.userId);
       nodes[nodeInfo.nodeId] = leaf;
       return parent.addBranch(leaf);
     };
-    makeLeaf = function(id, content, username) {
+    makeLeaf = function(parent, id, content, username) {
       return new Node({
-        id: id,
+        parent: parent,
+        nodeId: id,
         content: content,
         username: username
       });
     };
-    rootNode = makeLeaf(0, '', 'yggdrasil');
+    rootNode = makeLeaf(null, 0, '', 'yggdrasil');
     $("#tree").append(new NodeView({
       model: rootNode
     }).el);

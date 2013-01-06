@@ -5,12 +5,26 @@ $ ->
   class Node extends Backbone.Model
     initialize: =>
       @branches = new Branches
+      if parent = @get('parent')
+        @set 'level', parent.get('level') + 1
+      else
+        @set 'level', 0
       
     addBranch: (node) =>
       @branches.add node
 
+    lastNode: () =>
+      if @branches.isEmpty()
+        @
+      else
+        @branches.last().lastNode()
+
   class Branches extends Backbone.Collection
     model: Node
+
+    add: (child) =>
+      @trigger 'before-add', child
+      super child
 
   class NodeView extends Backbone.View
     className: 'node'
@@ -18,20 +32,25 @@ $ ->
 
     initialize: =>
       @render()
-      @model.branches.on 'add', @addChild
+      @model.view = @
+      @model.branches.on 'before-add', @addChild
 
     addChild: (child) =>
       childView = new NodeView model: child
-      @$el.append childView.el
+      @model.lastNode().view.$el.after childView.$el
 
     render: =>
       htmlContent = new Showdown.converter().makeHtml(@model.get('content'))
       @$el.append @template(_.extend(@model.toJSON(), htmlContent: htmlContent))
+      @setIndent()
       @replyForm = @$el.children('.node-reply-form')
       @replyForm.hide()
 
       $('.node-reply-link', @$el).click @toggleReplyForm
       @replyForm.submit @submitReply
+
+    setIndent: () =>
+      @$el.css 'margin-left', "#{@model.get('level')}em"
 
     toggleReplyForm: =>
       @replyForm.toggle()
@@ -44,7 +63,7 @@ $ ->
       if content? and app.get('sessionId')?
         $.ajax
           type: 'POST'
-          url: "/#{@model.get('id')}"
+          url: "/#{@model.get('nodeId')}"
           data:
             content: content
             sessionId: app.get('sessionId')
@@ -56,14 +75,15 @@ $ ->
 
   addNode = (nodeInfo) ->
     parent = nodes[nodeInfo.parentId]
-    leaf = makeLeaf nodeInfo.nodeId, nodeInfo.content, nodeInfo.userId
+    leaf = makeLeaf parent, nodeInfo.nodeId, nodeInfo.content, nodeInfo.userId
     nodes[nodeInfo.nodeId] = leaf
     parent.addBranch leaf
 
-  makeLeaf = (id, content, username) ->
-    new Node id: id, content: content, username: username
+  makeLeaf = (parent, id, content, username) ->
+    new Node parent: parent, nodeId: id, content: content, username: username
 
-  rootNode = makeLeaf 0, '', 'yggdrasil'
+  rootNode = makeLeaf null, 0, '', 'yggdrasil'
+  
   $("#tree").append(new NodeView(model: rootNode).el)
   nodes[0] = rootNode
 
