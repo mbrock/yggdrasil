@@ -23,6 +23,7 @@ executable Yggdrasil
                      bytestring >= 0.9,
                      ghc-prim >= 0.2,
                      uuid >= 1.2.9,
+                     hslogger,
                      scotty,
                      aeson,
                      websockets,

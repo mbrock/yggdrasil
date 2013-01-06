@@ -2,13 +2,15 @@
              DeriveGeneric, ScopedTypeVariables #-}
 
 import Ygg.Event (UserId(..), NodeId(..), NodeContent(..), Event(NodeAdded))
-import Ygg.EventStore
-    (EventStore, pushEvent, initializeEventStore, getAllEvents)
+
+import qualified Ygg.EventStore
+
+import Ygg.EventBus (EventBus)
+import qualified Ygg.EventBus
     
-import qualified Ygg.WebSocketServer
-    
-import Web.Scotty (put, post, get, redirect, body, scotty, middleware,
-                   json, text, param)
+import System.Log.Logger
+
+import Web.Scotty
 import Network.Wai.Middleware.RequestLogger (logStdoutDev)
 import Network.Wai.Middleware.Static (static)
 
@@ -21,8 +23,6 @@ import Control.Concurrent.MVar
 import Control.Monad (liftM)
 import Control.Monad.IO.Class (liftIO)
 
-import Data.IORef (IORef, newIORef, atomicModifyIORef)
-
 import Data.Map (Map)
 import qualified Data.Map as Map
 
@@ -31,20 +31,24 @@ import Data.Text.Lazy.Encoding (decodeUtf8)
 import qualified Data.Text.Lazy as T
 
 data YggState = YggState { yggNextNodeId :: Integer
-                         , yggEventStore :: EventStore
+                         , yggEventBus :: EventBus
                          , yggSessionMap :: Map String String }
 
 newYggState es = YggState { yggNextNodeId = 1
-                          , yggEventStore = es
+                          , yggEventBus = es
                           , yggSessionMap = Map.empty }
 
 defaultPort = 3000
 
 main = do
-  eventStore <- initializeEventStore
-  yggState <- newMVar (newYggState eventStore)
+  updateGlobalLogger "Ygg" (setLevel DEBUG)
   
-  forkIO $ Ygg.WebSocketServer.start eventStore
+  infoM "Ygg" "Starting Event Bus"
+  
+  eventBus <- Ygg.EventBus.start
+  eventStore <- Ygg.EventStore.start
+  
+  yggState <- newMVar (newYggState eventBus)
   
   scotty defaultPort $ do
     
@@ -56,12 +60,13 @@ main = do
       sessionId <- readSessionId
       username <- liftIO $ getUsernameForSession sessionId yggState
       id <- takeNextNodeId yggState
-      liftIO $ pushNodeAddedEvent eventStore id (NodeId parentId)
-                 (NodeContent $ T.pack $ content)
-                 (UserId username)
+      liftIO $ pushNodeAddedEvent eventBus
+                       id (NodeId parentId)
+                       (NodeContent $ T.pack $ content)
+                       (UserId username)
 
     get "/history" $ do
-      liftIO (getAllEvents eventStore) >>= json
+      liftIO (Ygg.EventStore.getAllEvents eventStore) >>= json
 
     post "/login/:username" $ \(username :: String) -> do
       sessionId <- liftIO $ fmap UUID.toString UUIDV4.nextRandom
@@ -89,7 +94,7 @@ addUserSession :: MVar YggState -> String -> String -> IO ()
 addUserSession y k v = modifyMVar_ y (return . f)
     where f y = y { yggSessionMap = Map.insert k v (yggSessionMap y) }
 
-pushNodeAddedEvent :: EventStore -> NodeId -> NodeId -> NodeContent 
+pushNodeAddedEvent :: EventBus -> NodeId -> NodeId -> NodeContent 
                       -> UserId -> IO ()
-pushNodeAddedEvent es id id' c userId = 
-  liftIO $ pushEvent es (NodeAdded id id' c userId)
+pushNodeAddedEvent bus id id' c userId = 
+  liftIO $ Ygg.EventBus.pushEvent bus (NodeAdded id id' c userId)

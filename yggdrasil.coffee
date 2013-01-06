@@ -56,8 +56,8 @@ $ ->
 
   addNode = (nodeInfo) ->
     parent = nodes[nodeInfo.parentId]
-    leaf = makeLeaf nodeInfo.id, nodeInfo.content, nodeInfo.userId
-    nodes[nodeInfo.id] = leaf
+    leaf = makeLeaf nodeInfo.nodeId, nodeInfo.content, nodeInfo.userId
+    nodes[nodeInfo.nodeId] = leaf
     parent.addBranch leaf
 
   makeLeaf = (id, content, username) ->
@@ -65,7 +65,7 @@ $ ->
 
   rootNode = makeLeaf 0, '', 'yggdrasil'
   $("#tree").append(new NodeView(model: rootNode).el)
-  nodes['0'] = rootNode
+  nodes[0] = rootNode
 
   app = new App
   document.yggdrasil = app

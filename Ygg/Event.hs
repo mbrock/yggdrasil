@@ -37,7 +37,7 @@ instance FromJSON UserId
 
 instance FromJSON Event where
   parseJSON (Object v) = NodeAdded <$>
-                         v .: "id" <*>
+                         v .: "nodeId" <*>
                          v .: "parentId" <*>
                          v .: "content" <*>
                          v .: "userId"
