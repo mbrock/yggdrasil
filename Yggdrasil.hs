@@ -75,6 +75,13 @@ readSessionId = param $ T.pack "sessionId"
 
 takeNextNodeId = liftIO . consumeNodeId
 
+consumeNodeId :: MVar YggState -> IO NodeId
+consumeNodeId v = do
+  y <- takeMVar v
+  putMVar v (y { yggNextNodeId = yggNextNodeId y + 1 })
+  return $ NodeId (yggNextNodeId y)
+
+getUsernameForSession :: String -> MVar YggState -> IO String
 getUsernameForSession sessionId yggState =
   readMVar yggState >>= return . (Map.! sessionId) . yggSessionMap
 
@@ -86,8 +93,3 @@ pushNodeAddedEvent :: EventStore -> NodeId -> NodeId -> NodeContent
                       -> UserId -> IO ()
 pushNodeAddedEvent es id id' c userId = 
   liftIO $ pushEvent es (NodeAdded id id' c userId)
-
-consumeNodeId v = do
-  y <- takeMVar v
-  putMVar v (y { yggNextNodeId = yggNextNodeId y + 1 })
-  return $ NodeId (yggNextNodeId y)

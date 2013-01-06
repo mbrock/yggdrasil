@@ -26,7 +26,9 @@ instance ToJSON UserId
 
 instance ToJSON Event where
   toJSON (NodeAdded x y z userId) =
-    object ["id" .= x, "parentId" .= y, "content" .= z,
+    object ["nodeId" .= x,
+            "parentId" .= y,
+            "content" .= z,
             "userId" .= userId]
 
 instance FromJSON NodeId
