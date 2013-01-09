@@ -1,8 +1,16 @@
 {-# LANGUAGE DeriveGeneric, OverloadedStrings #-}
 
-module Ygg.Event where
+module Ygg.Event (Event (..),
+                  NodeId (..),
+                  UserId (..),
+                  NodeContent (..)) where
 
 import Data.Text.Lazy
+
+import Data.UUID (UUID)
+import qualified Data.UUID as UUID
+
+import Data.Maybe
 
 import Data.Aeson
 import GHC.Generics (Generic)
@@ -11,7 +19,7 @@ import Control.Applicative
 import Data.Time.Clock
 import Data.Time.Format
 
-newtype NodeId = NodeId Integer
+newtype NodeId = NodeId UUID
                deriving (Eq, Show, Generic)
                         
 newtype UserId = UserId String
@@ -46,3 +54,10 @@ instance FromJSON Event where
                          v .: "content" <*>
                          v .: "userId" <*>
                          v .: "creationDate"
+
+instance ToJSON UUID where
+  toJSON = toJSON . UUID.toString
+  
+instance FromJSON UUID where
+  parseJSON (String s) = 
+    return $ fromJust (UUID.fromString $ unpack $ fromStrict s)

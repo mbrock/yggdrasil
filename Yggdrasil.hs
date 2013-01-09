@@ -31,13 +31,12 @@ import qualified Data.Map as Map
 import Data.Text.Lazy.Encoding (decodeUtf8)
 
 import qualified Data.Text.Lazy as T
+import qualified Data.Text as TT
 
-data YggState = YggState { yggNextNodeId :: Integer
-                         , yggEventBus :: EventBus
+data YggState = YggState { yggEventBus :: EventBus
                          , yggSessionMap :: Map String String }
 
-newYggState es = YggState { yggNextNodeId = 1
-                          , yggEventBus = es
+newYggState es = YggState { yggEventBus = es
                           , yggSessionMap = Map.empty }
 
 defaultPort = 3000
@@ -61,10 +60,10 @@ main = do
       content <- readContent
       sessionId <- readSessionId
       username <- liftIO $ getUsernameForSession sessionId yggState
-      id <- takeNextNodeId yggState
+      nodeId <- liftIO UUIDV4.nextRandom
       creationDate <- liftIO getCurrentTime
       liftIO $ pushNodeAddedEvent eventBus
-                       id (NodeId parentId)
+                       (NodeId nodeId) (NodeId parentId)
                        (NodeContent $ T.pack $ content)
                        (UserId username)
                        creationDate
@@ -82,14 +81,6 @@ main = do
 readContent = param $ T.pack "content"
 readSessionId = param $ T.pack "sessionId"
 
-takeNextNodeId = liftIO . consumeNodeId
-
-consumeNodeId :: MVar YggState -> IO NodeId
-consumeNodeId v = do
-  y <- takeMVar v
-  putMVar v (y { yggNextNodeId = yggNextNodeId y + 1 })
-  return $ NodeId (yggNextNodeId y)
-
 getUsernameForSession :: String -> MVar YggState -> IO String
 getUsernameForSession sessionId yggState =
   readMVar yggState >>= return . (Map.! sessionId) . yggSessionMap
@@ -103,3 +94,6 @@ pushNodeAddedEvent :: EventBus -> NodeId -> NodeId -> NodeContent
 pushNodeAddedEvent bus id id' c userId creationDate =
     liftIO $ Ygg.EventBus.pushEvent bus e
         where e = (NodeAdded id id' c userId creationDate)
+
+instance Parsable UUID.UUID where
+  parseParam = readEither

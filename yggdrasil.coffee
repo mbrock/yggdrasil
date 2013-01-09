@@ -88,10 +88,13 @@ $ ->
       username: username,
       creationDate: creationDate
 
-  rootNode = makeLeaf null, 0, '', 'root', "2013-01-01T00:00:00.000Z"
+  rootId = '1cb24849-2565-40eb-9b41-ea65daa6b271'
+
+  rootNode = makeLeaf null, rootId,
+    '', 'root', "2013-01-01T00:00:00.000Z"
   
   $("#tree").append(new NodeView(model: rootNode).el)
-  nodes[0] = rootNode
+  nodes[rootId] = rootNode
 
   app = new App
   document.yggdrasil = app
