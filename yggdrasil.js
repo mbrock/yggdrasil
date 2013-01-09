@@ -163,19 +163,20 @@
     addNode = function(nodeInfo) {
       var leaf, parent;
       parent = nodes[nodeInfo.parentId];
-      leaf = makeLeaf(parent, nodeInfo.nodeId, nodeInfo.content, nodeInfo.userId);
+      leaf = makeLeaf(parent, nodeInfo.nodeId, nodeInfo.content, nodeInfo.userId, nodeInfo.creationDate);
       nodes[nodeInfo.nodeId] = leaf;
       return parent.addBranch(leaf);
     };
-    makeLeaf = function(parent, id, content, username) {
+    makeLeaf = function(parent, id, content, username, creationDate) {
       return new Node({
         parent: parent,
         nodeId: id,
         content: content,
-        username: username
+        username: username,
+        creationDate: creationDate
       });
     };
-    rootNode = makeLeaf(null, 0, '', 'yggdrasil');
+    rootNode = makeLeaf(null, 0, '', 'root', "2013-01-01T00:00:00.000Z");
     $("#tree").append(new NodeView({
       model: rootNode
     }).el);

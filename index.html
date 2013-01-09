@@ -23,12 +23,16 @@
       }
 
       .node-username {
-        margin-left: 1em;
+        margin-left: 1ex;
       }
 
-      .node-controls {
+      .node-creation-date {
+
+      }
+
+      .node-reply-link {
         float: right;
-        padding: 10px;
+        margin-right: 1ex;
       }
 
       .node-controls a {
@@ -71,11 +75,11 @@
     <script type="text/template" id="node-template">
       <div class="node-header">
         <span class="node-username">
-          <%- username %>
-          <%- level %>
+          <%- username %>,
         </span>
-      </div>
-      <div class="node-controls">
+        <span class="node-creation-date">
+          <%- moment.utc(creationDate).fromNow() %>
+        </span>
         <a href="#" class="node-reply-link">⤸</a>
       </div>
       <div class="node-content">
@@ -126,6 +130,7 @@
     <script src="//netdna.bootstrapcdn.com/twitter-bootstrap/2.2.2/js/bootstrap.min.js"></script>
     <script src="//cdnjs.cloudflare.com/ajax/libs/d3/3.0.1/d3.v3.min.js"></script>
     <script src="js/showdown.js"></script>
+    <script src="js/moment.min.js"></script>
     <script src="yggdrasil.js"></script>
   </body>
 </html>

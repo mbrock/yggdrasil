@@ -8,6 +8,9 @@ import Data.Aeson
 import GHC.Generics (Generic)
 import Control.Applicative
 
+import Data.Time.Clock
+import Data.Time.Format
+
 newtype NodeId = NodeId Integer
                deriving (Eq, Show, Generic)
                         
@@ -17,7 +20,7 @@ newtype UserId = UserId String
 newtype NodeContent = NodeContent Text
                     deriving (Eq, Show, Generic)
 
-data Event = NodeAdded NodeId NodeId NodeContent UserId
+data Event = NodeAdded NodeId NodeId NodeContent UserId UTCTime
            deriving (Eq, Show, Generic)
 
 instance ToJSON NodeId
@@ -25,11 +28,12 @@ instance ToJSON NodeContent
 instance ToJSON UserId
 
 instance ToJSON Event where
-  toJSON (NodeAdded x y z userId) =
+  toJSON (NodeAdded x y z userId creationDate) =
     object ["nodeId" .= x,
             "parentId" .= y,
             "content" .= z,
-            "userId" .= userId]
+            "userId" .= userId,
+            "creationDate" .= creationDate]
 
 instance FromJSON NodeId
 instance FromJSON NodeContent
@@ -40,6 +44,5 @@ instance FromJSON Event where
                          v .: "nodeId" <*>
                          v .: "parentId" <*>
                          v .: "content" <*>
-                         v .: "userId"
-
-                        
+                         v .: "userId" <*>
+                         v .: "creationDate"

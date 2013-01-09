@@ -10,6 +10,8 @@ import qualified Ygg.EventBus
     
 import System.Log.Logger
 
+import Data.Time.Clock (UTCTime, getCurrentTime)
+
 import Web.Scotty
 import Network.Wai.Middleware.RequestLogger (logStdoutDev)
 import Network.Wai.Middleware.Static (static)
@@ -60,10 +62,12 @@ main = do
       sessionId <- readSessionId
       username <- liftIO $ getUsernameForSession sessionId yggState
       id <- takeNextNodeId yggState
+      creationDate <- liftIO getCurrentTime
       liftIO $ pushNodeAddedEvent eventBus
                        id (NodeId parentId)
                        (NodeContent $ T.pack $ content)
                        (UserId username)
+                       creationDate
 
     get "/history" $ do
       liftIO (Ygg.EventStore.getAllEvents eventStore) >>= json
@@ -95,6 +99,7 @@ addUserSession y k v = modifyMVar_ y (return . f)
     where f y = y { yggSessionMap = Map.insert k v (yggSessionMap y) }
 
 pushNodeAddedEvent :: EventBus -> NodeId -> NodeId -> NodeContent 
-                      -> UserId -> IO ()
-pushNodeAddedEvent bus id id' c userId = 
-  liftIO $ Ygg.EventBus.pushEvent bus (NodeAdded id id' c userId)
+                      -> UserId -> UTCTime -> IO ()
+pushNodeAddedEvent bus id id' c userId creationDate =
+    liftIO $ Ygg.EventBus.pushEvent bus e
+        where e = (NodeAdded id id' c userId creationDate)
