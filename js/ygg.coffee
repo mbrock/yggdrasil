@@ -1,6 +1,6 @@
-define ['cs!ygg/node', 'cs!ygg/app', 'cs!ygg/event-processor'],
-  (node, app, EventProcessor) ->
-    Node: node
+define ['cs!ygg/tree', 'cs!ygg/app', 'cs!ygg/event-processor'],
+  (tree, app, EventProcessor) ->
+    Tree: tree
     App: app
     EventProcessor: new EventProcessor
     

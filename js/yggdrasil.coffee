@@ -18,7 +18,7 @@ define ['jquery', 'bootstrap',
 
     rootNode = Ygg.EventProcessor.addRootNode rootId, rootUserId, rootDate
       
-    $("#tree").append(new Ygg.Node.View(model: rootNode).el)
+    $("#tree").append(new Ygg.Tree.View(model: rootNode).el)
   
     $.getJSON "/history", (data) ->
           
@@ -27,7 +27,7 @@ define ['jquery', 'bootstrap',
       socket = new WebSocket("ws://#{location.hostname}:8080")
       socket.onopen = (event) ->
         socket.onmessage = (event) ->
-          Ygg.EventProcess.process (JSON.parse event.data)
+          Ygg.EventProcessor.process (JSON.parse event.data)
   
     $(".login-button").click ->
       username = $("#login-container input").val()

@@ -1,4 +1,5 @@
-define ['cs!ygg/node', 'cs!ygg/app', 'backbone', 'md5'], (YggNode, YggApp, Backbone, CryptoJS) ->
+define ['cs!ygg/app', 'cs!ygg/tree', 'backbone', 'md5'], (YggApp, YggTree, Backbone, CryptoJS) ->
+  
   class EventProcessor
     constructor: () ->
       @nodes = {}
@@ -36,7 +37,7 @@ define ['cs!ygg/node', 'cs!ygg/app', 'backbone', 'md5'], (YggNode, YggApp, Backb
       parent.addBranch leaf
   
     makeLeaf: (parent, id, content, userId, creationDate) =>
-      new YggNode.Node
+      new YggTree.Node
         parent: parent,
         nodeId: id,
         content: content,
