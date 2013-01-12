@@ -46,7 +46,7 @@ $ ->
       htmlContent = new Showdown.converter().makeHtml(@model.get('content'))
       user = @getUser().toJSON()
       gravatarUrl = "http://www.gravatar.com/avatar/#{user.gravatarHash}"
-      gravatarUrl += "?s=48&d=monsterid"
+      gravatarUrl += "?s=52&d=monsterid"
       @$el.append @template(_.extend(@model.toJSON(),
         htmlContent: htmlContent,
         user: user,

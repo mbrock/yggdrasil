@@ -122,7 +122,7 @@
         htmlContent = new Showdown.converter().makeHtml(this.model.get('content'));
         user = this.getUser().toJSON();
         gravatarUrl = "http://www.gravatar.com/avatar/" + user.gravatarHash;
-        gravatarUrl += "?s=48&d=monsterid";
+        gravatarUrl += "?s=52&d=monsterid";
         this.$el.append(this.template(_.extend(this.model.toJSON(), {
           htmlContent: htmlContent,
           user: user,
