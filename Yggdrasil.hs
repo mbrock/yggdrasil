@@ -12,6 +12,8 @@ import qualified Ygg.TreeCache
 
 import Ygg.TreeCacheServer
     
+import Ygg.App
+
 import System.Log.Logger
 
 import Control.Concurrent.STM
@@ -30,7 +32,7 @@ import Control.Concurrent (forkIO)
 import Control.Concurrent.MVar
 
 import Control.Monad (liftM)
-import Control.Monad.IO.Class (liftIO)
+import Control.Monad.IO.Class (liftIO, MonadIO)
 
 import Data.Map (Map)
 import qualified Data.Map as Map
@@ -40,20 +42,23 @@ import Data.Text.Lazy.Encoding (decodeUtf8)
 import qualified Data.Text.Lazy as T
 import qualified Data.Text as TT
 
-data YggState = YggState { yggEventBus :: EventBus
-                         , yggSessionMap :: Map String UserId
-                         , yggUserMap :: Map UserName UserId
-                         , yggTreeCache :: TreeCacheServer }
-
-newYggState es t = 
-  YggState { yggEventBus = es
-           , yggSessionMap = Map.empty 
-           , yggUserMap = Map.empty 
-           , yggTreeCache = t }
+newYggState = 
+  ServerState { yggSessionMap = Map.empty 
+              , yggUserMap = Map.empty }
 
 defaultPort = 3000
 
-main = do
+makeActFunction :: MonadIO m =>
+                   TreeCacheServer ->
+                   EventBus ->
+                   TVar ServerState ->
+                   (forall a. Ygg.App.Action a -> m a)
+makeActFunction cache bus state m =
+  do
+    yggdrasil <- liftIO (Ygg.TreeCacheServer.getYggdrasil cache)
+    runAction yggdrasil state bus m
+
+main =  do
   updateGlobalLogger "Ygg" (setLevel DEBUG)
   
   eventBus <- Ygg.EventBus.start
@@ -61,9 +66,11 @@ main = do
   allEvents <- Ygg.EventStore.getAllEvents eventStore
   treeCache <- Ygg.TreeCacheServer.start allEvents
   
-  yggState <- newMVar (newYggState eventBus treeCache)
-  
+  yggState <- atomically $ newTVar newYggState
+    
   scotty defaultPort $ do
+    
+    let act = makeActFunction treeCache eventBus yggState
     
     middleware logStdoutDev
     middleware static
@@ -71,14 +78,15 @@ main = do
     post "/:parentId" $ \parentId -> do
       content <- readContent
       sessionId <- readSessionId
-      Just userId <- liftIO $ getUserIdForSession sessionId yggState
-      nodeId <- liftIO $ fmap UUID.toString UUIDV4.nextRandom
-      creationDate <- liftIO getCurrentTime
-      liftIO $ pushNodeAddedEvent eventBus
-                       (NodeId nodeId) (NodeId parentId)
-                       (NodeContent $ T.pack $ content)
-                       userId
-                       creationDate
+      
+      act $ do
+        Just userId <- getUserIdForSession sessionId
+        nodeId <- liftIO $ fmap UUID.toString UUIDV4.nextRandom
+        creationDate <- liftIO getCurrentTime
+        pushNodeAddedEvent
+          (NodeId nodeId) (NodeId parentId)
+          (NodeContent $ T.pack $ content)
+          userId creationDate
 
     get "/history" $ do
       liftIO (Ygg.EventStore.getAllEvents eventStore) >>= json
@@ -88,24 +96,26 @@ main = do
 
     post "/login/:username" $ \username -> do
       sessionId <- liftIO $ fmap UUID.toString UUIDV4.nextRandom
-      Just userId <- liftIO $ getIdForUser (UserName username) yggState
-      liftIO $ addUserSession yggState sessionId userId
+      Just userId <- act $ getIdForUser (UserName username)
+      
+      act $ addUserSession sessionId userId
       
       liftIO $ debugM "Ygg.WebServer" $
-        username ++ " logged in (" ++ show (userId, sessionId) ++ ")"
+          username ++ " logged in (" ++ show (userId, sessionId) ++ ")"
 
       json [sessionId, renderUserId userId]
       
     post "/register/:username" $ \userName -> do
       sessionId <- liftIO $ fmap UUID.toString UUIDV4.nextRandom
       userId <- liftIO $ fmap UUID.toString UUIDV4.nextRandom
+
+      act $ do
+        addUser (UserName userName) (UserId userId)
+        addUserSession sessionId (UserId userId)
       
-      liftIO $ addUser yggState (UserName userName) (UserId userId)
-      liftIO $ addUserSession yggState sessionId (UserId userId)
-      
-      liftIO $ pushUserRegisteredEvent eventBus (UserId userId)
-      liftIO $ pushUserNameSetEvent eventBus
-        (UserId userId) (UserName userName)
+        pushUserRegisteredEvent (UserId userId)
+        pushUserNameSetEvent
+          (UserId userId) (UserName userName)
       
       liftIO $ debugM "Ygg.WebServer" $
         userName ++ " registered (" ++ show (userId, sessionId) ++ ")"
@@ -115,10 +125,9 @@ main = do
     post "/my-gravatar-hash" $ do
       content <- readContent
       sessionId <- readSessionId
-      Just userId <- liftIO $ getUserIdForSession sessionId yggState
+      Just userId <- act $ getUserIdForSession sessionId
       
-      liftIO $ pushUserGravatarHashSetEvent eventBus
-        userId (GravatarHash content)
+      act $ pushUserGravatarHashSetEvent userId (GravatarHash content)
         
       liftIO $ debugM "Ygg.WebServer" $
         show userId ++ " set Gravatar hash to " ++ show content
@@ -128,35 +137,17 @@ main = do
 readContent = param $ T.pack "content"
 readSessionId = param $ T.pack "sessionId"
 
-getUserIdForSession :: String -> MVar YggState -> IO (Maybe UserId)
-getUserIdForSession sessionId yggState =
-  fmap ((Map.lookup sessionId) . yggSessionMap) (readMVar yggState)
+pushNodeAddedEvent id id' c userId creationDate =
+    writeEvent $ NodeAdded id id' c userId creationDate
 
-getIdForUser :: UserName -> MVar YggState -> IO (Maybe UserId)
-getIdForUser userName yggState = do
-  state <- readMVar yggState
-  y <- atomically $ readTVar $ latestYggdrasil $ yggTreeCache state
-  return $ Map.lookup userName (Ygg.TreeCache.yggUserNames y)
+pushUserRegisteredEvent userId =
+    writeEvent $ UserRegistered userId
 
-addUser :: MVar YggState -> UserName -> UserId -> IO ()
-addUser y k v = modifyMVar_ y (return . f)
-    where f y = y { yggUserMap = Map.insert k v (yggUserMap y) }
+pushUserNameSetEvent userId userName =
+    writeEvent $ UserNameSet userId userName
 
-addUserSession :: MVar YggState -> String -> UserId -> IO ()
-addUserSession y k v = modifyMVar_ y (return . f)
-    where f y = y { yggSessionMap = Map.insert k v (yggSessionMap y) }
-
-pushNodeAddedEvent bus id id' c userId creationDate =
-    Ygg.EventBus.pushEvent bus $ NodeAdded id id' c userId creationDate
-
-pushUserRegisteredEvent bus userId =
-    Ygg.EventBus.pushEvent bus $ UserRegistered userId
-
-pushUserNameSetEvent bus userId userName =
-    Ygg.EventBus.pushEvent bus $ UserNameSet userId userName
-
-pushUserGravatarHashSetEvent bus userId gravatarHash =
-    Ygg.EventBus.pushEvent bus $ UserGravatarHashSet userId gravatarHash
+pushUserGravatarHashSetEvent userId gravatarHash =
+    writeEvent $ UserGravatarHashSet userId gravatarHash
 
 instance Parsable UUID.UUID where
   parseParam = readEither
