@@ -79,14 +79,9 @@ main = do
     post "/:parentId" $ \parentId ->
       act . postNode (NodeId parentId) =<< readContent
 
-    post "/login/:username" $ \username ->
-      json =<< (act $ loginAs (UserName username))
-      
-    post "/register/:username" $ \userName ->
-      json =<< (act $ registerUser (UserName userName))
-      
-    post "/my-gravatar-hash" $
-      readContent >>= act . setMyGravatarHash
+    post "/login/:username"     $ (json =<<) . act . loginAs . UserName
+    post "/register/:username"  $ (json =<<) . act . registerUser . UserName
+    post "/my-gravatar-hash"    $ readContent >>=  act . setMyGravatarHash
 
     get "/history" $
       json =<< liftIO (Ygg.EventStore.getAllEvents eventStore)
