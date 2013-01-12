@@ -56,12 +56,10 @@ defaultPort = 3000
 main = do
   updateGlobalLogger "Ygg" (setLevel DEBUG)
   
-  infoM "Ygg" "Starting Event Bus"
-  
   eventBus <- Ygg.EventBus.start
   eventStore <- Ygg.EventStore.start
-  treeCache <- Ygg.TreeCacheServer.start =<<
-                 (Ygg.EventStore.getAllEvents eventStore)
+  allEvents <- Ygg.EventStore.getAllEvents eventStore
+  treeCache <- Ygg.TreeCacheServer.start allEvents
   
   yggState <- newMVar (newYggState eventBus treeCache)
   
@@ -136,7 +134,8 @@ getUserIdForSession sessionId yggState =
 
 getIdForUser :: UserName -> MVar YggState -> IO (Maybe UserId)
 getIdForUser userName yggState = do
-  y <- atomically . readTVar . latestYggdrasil . yggTreeCache =<< readMVar yggState
+  state <- readMVar yggState
+  y <- atomically $ readTVar $ latestYggdrasil $ yggTreeCache state
   return $ Map.lookup userName (Ygg.TreeCache.yggUserNames y)
 
 addUser :: MVar YggState -> UserName -> UserId -> IO ()
@@ -147,26 +146,17 @@ addUserSession :: MVar YggState -> String -> UserId -> IO ()
 addUserSession y k v = modifyMVar_ y (return . f)
     where f y = y { yggSessionMap = Map.insert k v (yggSessionMap y) }
 
-pushNodeAddedEvent :: EventBus -> NodeId -> NodeId -> NodeContent 
-                      -> UserId -> UTCTime -> IO ()
 pushNodeAddedEvent bus id id' c userId creationDate =
-    liftIO $ Ygg.EventBus.pushEvent bus e
-        where e = (NodeAdded id id' c userId creationDate)
+    Ygg.EventBus.pushEvent bus $ NodeAdded id id' c userId creationDate
 
-pushUserRegisteredEvent :: EventBus -> UserId -> IO ()
 pushUserRegisteredEvent bus userId =
-    liftIO $ Ygg.EventBus.pushEvent bus e
-        where e = UserRegistered userId
+    Ygg.EventBus.pushEvent bus $ UserRegistered userId
 
-pushUserNameSetEvent :: EventBus -> UserId -> UserName -> IO ()
 pushUserNameSetEvent bus userId userName =
-    liftIO $ Ygg.EventBus.pushEvent bus e
-        where e = UserNameSet userId userName
+    Ygg.EventBus.pushEvent bus $ UserNameSet userId userName
 
-pushUserGravatarHashSetEvent :: EventBus -> UserId -> GravatarHash -> IO ()
 pushUserGravatarHashSetEvent bus userId gravatarHash =
-    liftIO $ Ygg.EventBus.pushEvent bus e
-        where e = UserGravatarHashSet userId gravatarHash
+    Ygg.EventBus.pushEvent bus $ UserGravatarHashSet userId gravatarHash
 
 instance Parsable UUID.UUID where
   parseParam = readEither
