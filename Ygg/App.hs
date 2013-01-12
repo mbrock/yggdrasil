@@ -60,7 +60,7 @@ getIdForUser :: UserName -> Action (Maybe UserId)
 getIdForUser userName = do
   y <- getYggdrasil
   return $ Map.lookup userName (Ygg.TreeCache.yggUserNames y)
-
+  
 addUser :: UserName -> UserId -> Action ()
 addUser k v = lift . lift $ modify f
     where f y = y { yggUserMap = Map.insert k v (yggUserMap y) }

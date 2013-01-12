@@ -71,31 +71,28 @@ main = do
   yggState <- atomically $ newTVar newYggState
     
   scotty defaultPort $ do
-    
-    let act = makeActFunction treeCache eventBus yggState
-    
     middleware logStdoutDev
     middleware static
-  
-    post "/:parentId" $ \parentId -> do
-      content <- readContent
+    
+    let act = makeActFunction treeCache eventBus yggState
       
-      act $ postNode (NodeId parentId) content
+    post "/:parentId" $ \parentId ->
+      act . postNode (NodeId parentId) =<< readContent
 
-    get "/history" $ do
-      liftIO (Ygg.EventStore.getAllEvents eventStore) >>= json
+    post "/login/:username" $ \username ->
+      json =<< (act $ loginAs (UserName username))
       
-    get "/cache" $ do
-      liftIO (Ygg.TreeCacheServer.getYggdrasil treeCache) >>= json
-
-    post "/login/:username" $ \username -> do
-      json =<< (act $ loginAs username)
-      
-    post "/register/:username" $ \userName -> do
+    post "/register/:username" $ \userName ->
       json =<< (act $ registerUser (UserName userName))
       
-    post "/my-gravatar-hash" $ do
+    post "/my-gravatar-hash" $
       readContent >>= act . setMyGravatarHash
+
+    get "/history" $
+      json =<< liftIO (Ygg.EventStore.getAllEvents eventStore)
+      
+    get "/cache" $
+      json =<< liftIO (Ygg.TreeCacheServer.getYggdrasil treeCache) 
 
     get "/" (redirect "/index.html")
 
@@ -108,7 +105,7 @@ postNode parentId s = do
   writeEvent $ NodeAdded nodeId parentId content userId creationDate
     
 loginAs userName = do
-  Just userId <- getIdForUser (UserName userName)
+  Just userId <- getIdForUser userName
   sessionId <- makeUUID
       
   addUserSession sessionId userId
@@ -116,8 +113,8 @@ loginAs userName = do
   return (sessionId, userId)
 
 registerUser userName = do
-  sessionId <- liftIO $ fmap UUID.toString UUIDV4.nextRandom
-  userId <- liftIO $ fmap (UserId . UUID.toString) UUIDV4.nextRandom
+  sessionId <- makeUUID
+  userId <- fmap UserId makeUUID
   
   addUser userName userId
   addUserSession sessionId userId
