@@ -89,74 +89,53 @@ main = do
       liftIO (Ygg.TreeCacheServer.getYggdrasil treeCache) >>= json
 
     post "/login/:username" $ \username -> do
-      (sessionId, userId) <- act $ loginAs username
-      json [sessionId, renderUserId userId]
+      json =<< (act $ loginAs username)
       
     post "/register/:username" $ \userName -> do
-      sessionId <- liftIO $ fmap UUID.toString UUIDV4.nextRandom
-      userId <- liftIO $ fmap UUID.toString UUIDV4.nextRandom
-
-      act $ do
-        addUser (UserName userName) (UserId userId)
-        addUserSession sessionId (UserId userId)
-      
-        pushUserRegisteredEvent (UserId userId)
-        pushUserNameSetEvent
-          (UserId userId) (UserName userName)
-      
-      liftIO $ debugM "Ygg.WebServer" $
-        userName ++ " registered (" ++ show (userId, sessionId) ++ ")"
-      
-      json [sessionId, userId]
+      json =<< (act $ registerUser (UserName userName))
       
     post "/my-gravatar-hash" $ do
-      content <- readContent
-      Just sessionId <- readSessionId
-      Just userId <- act $ getUserIdForSession sessionId
-      
-      act $ pushUserGravatarHashSetEvent userId (GravatarHash content)
-        
-      liftIO $ debugM "Ygg.WebServer" $
-        show userId ++ " set Gravatar hash to " ++ show content
+      readContent >>= act . setMyGravatarHash
 
     get "/" (redirect "/index.html")
 
-readContent = param $ T.pack "content"
-
-readSessionId = rescue (fmap Just $ param $ T.pack "sessionId") 
-                       (\_ -> return Nothing)
-
-postNode parentId content = do
+postNode parentId s = do
+  let content = NodeContent $ T.pack s
   Just userId <- getLoggedInUserId
-  nodeId <- liftIO $ UUID.toString <$> UUIDV4.nextRandom
+  nodeId <- NodeId <$> makeUUID
   creationDate <- liftIO getCurrentTime
-  pushNodeAddedEvent
-    (NodeId nodeId) parentId
-    (NodeContent $ T.pack $ content)
-    userId creationDate
+      
+  writeEvent $ NodeAdded nodeId parentId content userId creationDate
     
 loginAs userName = do
   Just userId <- getIdForUser (UserName userName)
-  sessionId <- liftIO $ fmap UUID.toString UUIDV4.nextRandom
+  sessionId <- makeUUID
       
   addUserSession sessionId userId
-      
-  liftIO $ debugM "Ygg.WebServer" $
-    userName ++ " logged in (" ++ show (userId, sessionId) ++ ")"
     
   return (sessionId, userId)
 
-pushNodeAddedEvent id id' c userId creationDate =
-    writeEvent $ NodeAdded id id' c userId creationDate
+registerUser userName = do
+  sessionId <- liftIO $ fmap UUID.toString UUIDV4.nextRandom
+  userId <- liftIO $ fmap (UserId . UUID.toString) UUIDV4.nextRandom
+  
+  addUser userName userId
+  addUserSession sessionId userId
+      
+  writeEvent $ UserRegistered userId
+  writeEvent $ UserNameSet userId userName
+  
+  return (sessionId, userId)
 
-pushUserRegisteredEvent userId =
-    writeEvent $ UserRegistered userId
+setMyGravatarHash content = do
+  Just userId <- getLoggedInUserId
+  writeEvent $ UserGravatarHashSet userId (GravatarHash content)
 
-pushUserNameSetEvent userId userName =
-    writeEvent $ UserNameSet userId userName
-
-pushUserGravatarHashSetEvent userId gravatarHash =
-    writeEvent $ UserGravatarHashSet userId gravatarHash
+readContent = param $ T.pack "content"
+readSessionId = rescue (fmap Just $ param $ T.pack "sessionId") 
+                       (\_ -> return Nothing)
 
 instance Parsable UUID.UUID where
   parseParam = readEither
+  
+makeUUID = liftIO $ fmap UUID.toString UUIDV4.nextRandom
