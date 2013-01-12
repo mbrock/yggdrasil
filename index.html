@@ -12,9 +12,16 @@
       }
 
       .node-content {
-        background-color: #ffe;
-        padding: 10px;
-        border-radius: 3px;
+        padding-top: 1ex;
+        padding-left: 1ex;
+        padding-right: 1ex;
+      }
+
+      .node-avatar {
+        float: left;
+        margin: 1ex 2ex 2ex 1ex;
+        box-shadow: 2px 2px 9px #aaa;
+        border: 1px solid #666;
       }
 
       .node-header {
@@ -23,7 +30,7 @@
       }
 
       .node-username {
-        margin-left: 1ex;
+        font-weight: bold;
       }
 
       .node-creation-date {
@@ -45,7 +52,7 @@
 
         margin: 10px;
         width: 40em;
-        background-color: #eee;
+        background-color: #ffe;
 
         border: 1px solid #aaa;
         border-radius: 3px;
@@ -73,14 +80,16 @@
     </style>
 
     <script type="text/template" id="node-template">
+      <img class="node-avatar" src="<%= gravatarUrl %>" />
+
       <div class="node-header">
         <span class="node-username">
-          <%- username %>,
+          <%- user.userName %>,
         </span>
         <span class="node-creation-date">
           <%- moment.utc(creationDate).fromNow() %>
         </span>
-        <a href="#" class="node-reply-link">⤸</a>
+        <a href="#" class="node-reply-link">Reply</a>
       </div>
       <div class="node-content">
         <%= htmlContent %>
@@ -111,7 +120,8 @@
           <div id="login-container" class="pull-right">
             <form class="navbar-form">
               <input class="span2" type="text" placeholder="Username">
-              <button type="submit" class="btn">Sign in</button>
+              <button type="submit" class="btn login-button">Sign in</button>
+              <button type="submit" class="btn register-button">Register</button>
             </form>
           </div>
         </div>
@@ -131,6 +141,7 @@
     <script src="//cdnjs.cloudflare.com/ajax/libs/d3/3.0.1/d3.v3.min.js"></script>
     <script src="js/showdown.js"></script>
     <script src="js/moment.min.js"></script>
+    <script src="js/md5.js"></script>
     <script src="yggdrasil.js"></script>
   </body>
 </html>

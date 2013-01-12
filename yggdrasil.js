@@ -5,7 +5,7 @@
     __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; };
 
   $(function() {
-    var App, Branches, Node, NodeView, addNode, app, finishLoggingInAs, makeLeaf, nodes, rootId, rootNode;
+    var App, Branches, Node, NodeView, addNode, addUser, app, finishLoggingInAs, makeLeaf, nodes, processEvent, rootId, rootNode, setUserGravatarHash, setUserName;
     App = (function(_super) {
 
       __extends(App, _super);
@@ -89,6 +89,8 @@
 
         this.addChild = __bind(this.addChild, this);
 
+        this.getUser = __bind(this.getUser, this);
+
         this.initialize = __bind(this.initialize, this);
         return NodeView.__super__.constructor.apply(this, arguments);
       }
@@ -103,6 +105,10 @@
         return this.model.branches.on('before-add', this.addChild);
       };
 
+      NodeView.prototype.getUser = function() {
+        return app.get('users')[this.model.get('userId')];
+      };
+
       NodeView.prototype.addChild = function(child) {
         var childView;
         childView = new NodeView({
@@ -112,10 +118,15 @@
       };
 
       NodeView.prototype.render = function() {
-        var htmlContent;
+        var gravatarUrl, htmlContent, user;
         htmlContent = new Showdown.converter().makeHtml(this.model.get('content'));
+        user = this.getUser().toJSON();
+        gravatarUrl = "http://www.gravatar.com/avatar/" + user.gravatarHash;
+        gravatarUrl += "?s=48&d=monsterid";
         this.$el.append(this.template(_.extend(this.model.toJSON(), {
-          htmlContent: htmlContent
+          htmlContent: htmlContent,
+          user: user,
+          gravatarUrl: gravatarUrl
         })));
         this.setIndent();
         this.replyForm = this.$el.children('.node-reply-form');
@@ -160,44 +171,91 @@
 
     })(Backbone.View);
     nodes = {};
+    processEvent = function(event) {
+      switch (event.eventType) {
+        case 'NodeAdded':
+          return addNode(event);
+        case 'UserRegistered':
+          return addUser(event);
+        case 'UserNameSet':
+          return setUserName(event);
+        case 'UserGravatarHashSet':
+          return setUserGravatarHash(event);
+      }
+    };
+    addUser = function(event) {
+      return app.get('users')[event.aggregateId] = new Backbone.Model({
+        userName: 'unnamed',
+        gravatarHash: CryptoJS.MD5(event.aggregateId),
+        hasCustomGravatarHash: false
+      });
+    };
+    setUserName = function(event) {
+      var user;
+      user = app.get('users')[event.aggregateId];
+      user.set({
+        userName: event.userName
+      });
+      if (!user.get('hasCustomGravatarHash')) {
+        return user.set({
+          gravatarHash: CryptoJS.MD5(event.userName)
+        });
+      }
+    };
+    setUserGravatarHash = function(event) {
+      var user;
+      user = app.get('users')[event.aggregateId];
+      return user.set({
+        gravatarHash: event.gravatarHash,
+        hasCustomGravatarHash: true
+      });
+    };
     addNode = function(nodeInfo) {
       var leaf, parent;
       parent = nodes[nodeInfo.parentId];
-      leaf = makeLeaf(parent, nodeInfo.nodeId, nodeInfo.content, nodeInfo.userId, nodeInfo.creationDate);
-      nodes[nodeInfo.nodeId] = leaf;
+      leaf = makeLeaf(parent, nodeInfo.aggregateId, nodeInfo.content, nodeInfo.userId, nodeInfo.creationDate);
+      nodes[nodeInfo.aggregateId] = leaf;
       return parent.addBranch(leaf);
     };
-    makeLeaf = function(parent, id, content, username, creationDate) {
+    makeLeaf = function(parent, id, content, userId, creationDate) {
       return new Node({
         parent: parent,
         nodeId: id,
         content: content,
-        username: username,
+        userId: userId,
         creationDate: creationDate
       });
     };
     rootId = '1cb24849-2565-40eb-9b41-ea65daa6b271';
-    rootNode = makeLeaf(null, rootId, '', 'root', "2013-01-01T00:00:00.000Z");
+    app = new App;
+    document.yggdrasil = app;
+    app.set({
+      users: {
+        '478de2d4-b41d-47fa-9ce8-3934e412a61b': new Backbone.Model({
+          userName: 'mbrock',
+          gravatarHash: 'f1640f0869d52c8fb9f5554d960f7eb0'
+        })
+      }
+    });
+    rootNode = makeLeaf(null, rootId, '', '478de2d4-b41d-47fa-9ce8-3934e412a61b', "2013-01-01T00:00:00.000Z");
     $("#tree").append(new NodeView({
       model: rootNode
     }).el);
     nodes[rootId] = rootNode;
-    app = new App;
-    document.yggdrasil = app;
     $.getJSON("/history", function(data) {
       var event, socket, _i, _len;
       for (_i = 0, _len = data.length; _i < _len; _i++) {
         event = data[_i];
-        addNode(event);
+        processEvent(event);
       }
       socket = new WebSocket("ws://" + location.hostname + ":8080");
       return socket.onopen = function(event) {
         return socket.onmessage = function(event) {
-          return addNode(JSON.parse(event.data));
+          return processEvent(JSON.parse(event.data));
         };
       };
     });
-    $("#login-container button").click(function() {
+    $(".login-button").click(function() {
       var username;
       username = $("#login-container input").val();
       $.ajax({
@@ -210,10 +268,25 @@
       });
       return false;
     });
+    $(".register-button").click(function() {
+      var username;
+      username = $("#login-container input").val();
+      $.ajax({
+        type: 'POST',
+        dataType: 'json',
+        url: "/register/" + username,
+        success: function(sessionId) {
+          return finishLoggingInAs(username, sessionId);
+        }
+      });
+      return false;
+    });
     return finishLoggingInAs = function(username, sessionId) {
       $("#login-container").empty();
       $("#login-container").append($("<p class=\"navbar-text\">Logged in as <i>" + username + "</i></p>"));
-      return app.set('sessionId', sessionId);
+      return app.set({
+        sessionId: sessionId
+      });
     };
   });
 
