@@ -2,9 +2,10 @@ define ['jquery', 'bootstrap',
         'backbone', 'underscore',
         'moment', 'showdown', 'md5',
 
-        'cs!ygg'],
+        'cs!ygg',
+        'cs!ygg/user-card'],
         
-  ($, Bootstrap, Backbone, _, moment, Showdown, CryptoJS, Ygg) -> $ ->  
+  ($, Bootstrap, Backbone, _, moment, Showdown, CryptoJS, Ygg, YggUserCard) -> $ ->  
 
     rootId = '1cb24849-2565-40eb-9b41-ea65daa6b271'
     rootUserId = '478de2d4-b41d-47fa-9ce8-3934e412a61b'
@@ -35,8 +36,8 @@ define ['jquery', 'bootstrap',
         type: 'POST'
         dataType: 'json'
         url: "/login/#{username}"
-        success: (sessionId) ->
-          finishLoggingInAs username, sessionId
+        success: ([sessionId, userId]) ->
+          finishLoggingInAs username, sessionId, userId
       false
   
     $(".register-button").click ->
@@ -45,13 +46,14 @@ define ['jquery', 'bootstrap',
         type: 'POST'
         dataType: 'json'
         url: "/register/#{username}"
-        success: (sessionId) ->
-          finishLoggingInAs username, sessionId
+        success: ([sessionId, userId]) ->
+          finishLoggingInAs username, sessionId, userId
       false
   
-    finishLoggingInAs = (username, sessionId) ->
+    finishLoggingInAs = (username, sessionId, userId) ->
       $("#login-container").empty()
       $("#login-container").append(
         $("<p class=\"navbar-text\">Logged in as <i>#{username}</i></p>"))
-        
+
       Ygg.App.set sessionId: sessionId
+      Ygg.App.set userId: userId

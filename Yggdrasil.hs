@@ -96,7 +96,7 @@ main = do
       liftIO $ debugM "Ygg.WebServer" $
         username ++ " logged in (" ++ show (userId, sessionId) ++ ")"
 
-      json sessionId
+      json [sessionId, renderUserId userId]
       
     post "/register/:username" $ \userName -> do
       sessionId <- liftIO $ fmap UUID.toString UUIDV4.nextRandom
@@ -112,7 +112,7 @@ main = do
       liftIO $ debugM "Ygg.WebServer" $
         userName ++ " registered (" ++ show (userId, sessionId) ++ ")"
       
-      json sessionId
+      json [sessionId, userId]
       
     post "/my-gravatar-hash" $ do
       content <- readContent

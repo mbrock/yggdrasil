@@ -18,10 +18,13 @@
       }
 
       .node-avatar {
+        box-shadow: 1px 1px 10px #aaa;
+        border: 1px solid #888;
+      }
+
+      .node .node-avatar {
         float: left;
         margin: 1ex 2ex 2ex 1ex;
-        box-shadow: 2px 2px 9px #aaa;
-        border: 1px solid #666;
       }
 
       .node-header {
@@ -79,6 +82,14 @@
       .node-reply-form input[type="submit"] {
         display: block;
       }
+
+      #sidebar-user-card .node-username {
+        font-size: 120%;
+        margin-top: 1ex;
+      }
+
+      #sidebar-user-card {
+      }
     </style>
 
     <script type="text/template" id="node-template">
@@ -101,6 +112,13 @@
                   rows="5" cols="5"></textarea>
         <input type="submit" value="Reply"/>
       </form>
+    </script>
+
+    <script type="text/template" id="user-card-template">
+      <img class="node-avatar" src="<%= gravatarUrl %>" />
+      <div class="node-username">
+        <%= userName %>
+      </div>
     </script>
 
   </head>
@@ -130,8 +148,16 @@
       </div>
     </div>
 
-    <div class="container">
-      <div id="tree">
+    <div class="container-fluid">
+      <div class="row-fluid">
+        <div class="span2">
+          <div id="sidebar-user-card">
+          </div>
+        </div>
+        <div class="span10">
+          <div id="tree">
+          </div>
+        </div>
       </div>
     </div>
 
