@@ -53,7 +53,7 @@ defaultPort = 3000
 makeActFunction :: TreeCacheServer ->
                    EventBus ->
                    TVar ServerState ->
-                   (forall a. Ygg.App.Action a -> ActionM a)
+                   (forall a. YggAction a -> ActionM a)
 makeActFunction cache bus state m =
   do
     yggdrasil <- liftIO (Ygg.TreeCacheServer.getYggdrasil cache)
@@ -91,6 +91,7 @@ main = do
 
     get "/" (redirect "/index.html")
 
+postNode :: NodeId -> String -> YggAction ()
 postNode parentId s = do
   let content = NodeContent $ T.pack s
   Just userId <- getLoggedInUserId

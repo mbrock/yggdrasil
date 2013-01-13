@@ -25,46 +25,58 @@ data ServerState = ServerState
     { yggSessionMap :: Map SessionId UserId
     , yggUserMap :: Map UserName UserId }
 
-type Action =
+type YggAction =
     WriterT [Event]
     (ReaderT (Yggdrasil, Maybe SessionId)
      (StateT ServerState IO))
 
 runAction :: MonadIO m => Yggdrasil -> Maybe SessionId 
-             -> TVar ServerState -> EventBus -> Action a -> m a
+             -> TVar ServerState -> EventBus -> YggAction a -> m a
 runAction y sessionId stateVar bus action = liftIO $ do
   state <- atomically $ readTVar stateVar
-  ((a, w), state') <- runStateT (runReaderT (runWriterT action)
-                                  (y, sessionId)) state
-  mapM_ (Ygg.EventBus.pushEvent bus) w
+  ((a, w), state') <- runAction' y sessionId state action
+  pushEvents bus w
   atomically $ writeTVar stateVar state'
   return a
   
-writeEvent :: Event -> Action ()
+runAction' :: Yggdrasil -> Maybe SessionId -> ServerState -> YggAction a
+              -> IO ((a, [Event]), ServerState)
+runAction' y sessionId state m =
+  runStateT (runReaderT (runWriterT m) (y, sessionId)) state
+             
+pushEvents :: EventBus -> [Event] -> IO ()             
+pushEvents bus = mapM_ (Ygg.EventBus.pushEvent bus)
+  
+writeEvent :: Event -> YggAction ()
 writeEvent e = tell [e]
 
-getUserIdForSession :: String -> Action (Maybe UserId)
-getUserIdForSession sessionId =
-  fmap ((Map.lookup sessionId) . yggSessionMap) getState
-  
+getState :: YggAction ServerState
 getState = lift $ lift get
 
+getYggdrasil :: YggAction Yggdrasil
 getYggdrasil = lift $ ask >>= return . fst
+
+getSessionId :: YggAction (Maybe SessionId)
 getSessionId = lift $ ask >>= return . snd
 
+getUserIdForSession :: String -> YggAction (Maybe UserId)
+getUserIdForSession sessionId =
+  fmap ((Map.lookup sessionId) . yggSessionMap) getState
+
+getLoggedInUserId :: YggAction (Maybe SessionId)
 getLoggedInUserId = do
   session <- getSessionId
   maybe (return Nothing) getUserIdForSession session
 
-getIdForUser :: UserName -> Action (Maybe UserId)
+getIdForUser :: UserName -> YggAction (Maybe UserId)
 getIdForUser userName = do
   y <- getYggdrasil
   return $ Map.lookup userName (Ygg.TreeCache.yggUserNames y)
   
-addUser :: UserName -> UserId -> Action ()
+addUser :: UserName -> UserId -> YggAction ()
 addUser k v = lift . lift $ modify f
     where f y = y { yggUserMap = Map.insert k v (yggUserMap y) }
 
-addUserSession :: String -> UserId -> Action ()
+addUserSession :: String -> UserId -> YggAction ()
 addUserSession k v = lift . lift $ modify f
     where f y = y { yggSessionMap = Map.insert k v (yggSessionMap y) }
