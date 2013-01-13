@@ -15,6 +15,7 @@ define ['lib/backbone'], (Backbone) ->
 
     addUser: (model) =>
       @users.add model
+      @trigger 'user-added', model
 
     getUserById: (id) =>
       @users.get id

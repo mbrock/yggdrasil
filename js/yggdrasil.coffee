@@ -5,7 +5,8 @@ define ['jquery', 'lib/bootstrap',
         'cs!ygg',
         'cs!ygg/user-card',
         'cs!ygg/login',
-        'cs!ygg/register'],
+        'cs!ygg/register',
+        'cs!ygg/notify'],
         
  ($, Bootstrap, Backbone, _, moment, Showdown, CryptoJS,
   Ygg, YggUserCard, YggLogin, YggRegister) ->

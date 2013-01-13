@@ -1,11 +1,13 @@
-define ['cs!ygg/app', 'cs!ygg/tree', 'lib/backbone', 'lib/md5'],
- (YggApp, YggTree, Backbone, CryptoJS) ->
+define ['cs!ygg/app', 'cs!ygg/tree', 'cs!ygg/notify',
+        'lib/backbone', 'lib/md5'],
+ (YggApp, YggTree, YggNotify, Backbone, CryptoJS) ->
   
   class EventProcessor
     constructor: () ->
       @nodes = {}
 
     process: (event) =>
+      YggNotify.show "Processing event: #{event.eventType}"
       switch event.eventType
         when 'NodeAdded' then @addNode event
         when 'UserRegistered' then @addUser event

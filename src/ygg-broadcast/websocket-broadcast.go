@@ -72,7 +72,7 @@ func (h *hub) runAmqpListener() {
 	}
 
 	state, err := channel.QueueDeclare(
-		"events",
+		"event-broadcast",
 		true,
 		false,
 		false,
@@ -86,7 +86,7 @@ func (h *hub) runAmqpListener() {
 		state.Messages, state.Consumers)
 
 	err = channel.QueueBind(
-		"events",
+		"event-broadcast",
 		"event",
 		"yggdrasil",
 		false,
@@ -96,7 +96,7 @@ func (h *hub) runAmqpListener() {
 	}
 
 	deliveries, err := channel.Consume(
-		"events",
+		"event-broadcast",
 		"websocket-broadcast",
 		false,
 		false,

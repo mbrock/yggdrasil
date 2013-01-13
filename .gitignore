@@ -11,3 +11,7 @@ dist/*
 bin/*
 pkg
 .DS_Store
+
+src/ygg-broadcast/ygg-broadcast
+
+ygg-broadcast

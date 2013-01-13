@@ -9,7 +9,9 @@ define ['jquery', 'cs!ygg/app'], ($, YggApp) ->
         dataType: 'json'
         url: "/register/#{username}"
         success: ([sessionId, userId]) ->
-          YggApp.login userId, sessionId
+          YggApp.on 'user-added', (user) ->
+            if user.id is userId
+              YggApp.login userId, sessionId
           
       false
   
