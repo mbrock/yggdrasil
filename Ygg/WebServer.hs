@@ -1,6 +1,8 @@
 {-# LANGUAGE OverloadedStrings, TypeSynonymInstances, FlexibleInstances, 
              DeriveGeneric, ScopedTypeVariables #-}
 
+module Ygg.WebServer where
+
 import Ygg.Event
 
 import qualified Ygg.EventStore
@@ -48,8 +50,6 @@ newYggState =
   ServerState { yggSessionMap = Map.empty 
               , yggUserMap = Map.empty }
 
-defaultPort = 3000
-
 makeActFunction :: TreeCacheServer ->
                    EventBus ->
                    TVar ServerState ->
@@ -60,7 +60,8 @@ makeActFunction cache bus state m =
     sessionId <- readSessionId
     runAction yggdrasil sessionId state bus m
 
-main = do
+start :: Int -> IO ()
+start port = do
   updateGlobalLogger "Ygg" (setLevel DEBUG)
   
   eventBus <- Ygg.EventBus.start
@@ -70,7 +71,7 @@ main = do
   
   yggState <- atomically $ newTVar newYggState
     
-  scotty defaultPort $ do
+  scotty port $ do
     middleware logStdoutDev
     middleware static
     

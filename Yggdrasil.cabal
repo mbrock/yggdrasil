@@ -13,7 +13,7 @@ build-type:          Simple
 cabal-version:       >=1.8
 
 executable Yggdrasil
-  main-is:           Yggdrasil.hs
+  main-is:           Ygg/Main.hs
   -- other-modules:
   build-depends:     base >= 4.5,
                      transformers == 0.3.*,

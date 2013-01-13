@@ -63,7 +63,7 @@ getUserIdForSession :: String -> YggAction (Maybe UserId)
 getUserIdForSession sessionId =
   fmap ((Map.lookup sessionId) . yggSessionMap) getState
 
-getLoggedInUserId :: YggAction (Maybe SessionId)
+getLoggedInUserId :: YggAction (Maybe UserId)
 getLoggedInUserId = do
   session <- getSessionId
   maybe (return Nothing) getUserIdForSession session
