@@ -22,9 +22,7 @@ define ['jquery', 'lib/bootstrap', 'lib/backbone', 'lib/underscore',
         YggApp.get('userId') isnt undefined
 
       getUser: () =>
-        userId = YggApp.get('userId')
-        if userId
-          YggApp.get('users')[userId].toJSON()
+        YggApp.getLoggedInUser().toJSON()
 
     userCardView = new UserCardView
 

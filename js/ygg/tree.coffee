@@ -35,7 +35,7 @@ define ['jquery', 'lib/backbone', 'lib/underscore', 'cs!ygg/app'],
         @model.branches.on 'before-add', @addChild
   
       getUser: () =>
-        App.get('users')[@model.get('userId')]
+        App.getUserById @model.get('userId')
   
       addChild: (child) =>
         childView = new NodeView model: child

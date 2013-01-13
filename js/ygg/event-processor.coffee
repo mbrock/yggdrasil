@@ -13,19 +13,20 @@ define ['cs!ygg/app', 'cs!ygg/tree', 'lib/backbone', 'lib/md5'],
         when 'UserGravatarHashSet' then @setUserGravatarHash event
 
     addUser: (event) =>
-      YggApp.get('users')[event.aggregateId] = new Backbone.Model
+      YggApp.addUser (new Backbone.Model
+        id: event.aggregateId
         userName: 'unnamed'
         gravatarHash: CryptoJS.MD5(event.aggregateId)
-        hasCustomGravatarHash: false
+        hasCustomGravatarHash: false)
 
     setUserName: (event) =>
-      user = YggApp.get('users')[event.aggregateId]
+      user = YggApp.getUserById event.aggregateId
       user.set userName: event.userName
       unless user.get 'hasCustomGravatarHash'
         user.set gravatarHash: CryptoJS.MD5(event.userName)
   
     setUserGravatarHash: (event) =>
-      user = YggApp.get('users')[event.aggregateId]
+      user = YggApp.getUserById event.aggregateId
       user.set
         gravatarHash: event.gravatarHash
         hasCustomGravatarHash: true
