@@ -35,7 +35,7 @@ import qualified Data.UUID.V4 as UUIDV4
 import Control.Concurrent (forkIO)
 import Control.Concurrent.MVar
 
-import Control.Monad (liftM)
+import Control.Monad (liftM, mapM_)
 import Control.Monad.IO.Class (liftIO, MonadIO)
 
 import Data.Map (Map)
@@ -63,6 +63,27 @@ makeActFunction cache bus state m =
 start :: Int -> IO ()
 start port = do
   updateGlobalLogger "Ygg" (setLevel DEBUG)
+  
+  mapM_ putStrLn $ [""] ++
+    map ("                " ++) [
+      "                  v .   ._, |_  .,",
+      "           `-._\\/  .  \\ /    |/_",
+      "               \\\\  _\\, y | \\//",
+      "         _\\_.___\\\\, \\\\/ -.\\||",
+      "           `7-,--.`._||  / / ,",
+      "           /'     `-. `./ / |/_.'",
+      "                     |    |//",
+      "                     |_    /",
+      "                     |-   |",
+      "                     |   =|",
+      "                     |    |",
+      "--------------------/ ,  . \\--------._"] ++
+    map ("            " ++ ) [
+      "",
+      " _     __    __    ___   ___    __    __   _   _    ",
+      "\\ \\_/ / /`_ / /`_ | | \\ | |_)  / /\\  ( (` | | | |   ",
+      " |_|  \\_\\_/ \\_\\_/ |_|_/ |_| \\ /_/--\\ _)_) |_| |_|__ ",
+      ""]
   
   eventBus <- Ygg.EventBus.start
   eventStore <- Ygg.EventStore.start

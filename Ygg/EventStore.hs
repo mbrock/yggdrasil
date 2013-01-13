@@ -6,6 +6,8 @@ import Control.Concurrent
 import Control.Concurrent.STM
 import Control.Concurrent.STM.TVar
 
+import Control.Monad
+
 import qualified Data.Aeson as JSON
 import qualified Data.ByteString.Lazy as BS
 
@@ -21,7 +23,7 @@ eventLogPath = "events.json"
 start :: IO EventStore
 start = do
   
-  Just events <- JSON.decode `fmap` BS.readFile eventLogPath
+  events <- readPersistedEvents
   store <- fmap EventStore (newTVarIO events)
 
   amqpConnection <- AMQP.openConnection "127.0.0.1" "/" "guest" "guest"
@@ -65,3 +67,15 @@ saveEventFromMessage es (m, env) = do
 
 getAllEvents :: EventStore -> IO [Event]
 getAllEvents = atomically . readTVar . allEvents
+
+readPersistedEvents :: IO [Event]
+readPersistedEvents = do
+  Just values <- JSON.decode `fmap` BS.readFile eventLogPath
+  
+  debugM "Ygg.EventStore" $
+    "Read " ++ show (length values) ++ " persisted events"
+    
+  forM values (\v ->
+         case JSON.fromJSON v of
+           JSON.Error x    -> fail x
+           JSON.Success e  -> return e)
