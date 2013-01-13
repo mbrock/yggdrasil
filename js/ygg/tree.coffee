@@ -1,4 +1,4 @@
-define ['jquery', 'backbone', 'underscore', 'cs!ygg/app'],
+define ['jquery', 'lib/backbone', 'lib/underscore', 'cs!ygg/app'],
   ($, Backbone, _, App) ->
     
     class Node extends Backbone.Model

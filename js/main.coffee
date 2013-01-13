@@ -1,17 +1,17 @@
 requirejs.config
   shim:
-    bootstrap:
+    'lib/bootstrap':
       deps: ['jquery']
       exports: '$.fn.popover'
   
-    backbone:
-      deps: ['underscore', 'jquery']
+    'lib/backbone':
+      deps: ['lib/underscore', 'jquery']
       exports: 'Backbone'
 
-    md5:
+    'lib/md5':
       exports: 'CryptoJS'
 
-    underscore:
+    'lib/underscore':
       exports: '_'
 
 define ['cs!yggdrasil'], (Yggdrasil) -> { }

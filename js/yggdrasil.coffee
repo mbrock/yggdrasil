@@ -1,6 +1,6 @@
-define ['jquery', 'bootstrap',
-        'backbone', 'underscore',
-        'moment', 'showdown', 'md5',
+define ['jquery', 'lib/bootstrap',
+        'lib/backbone', 'lib/underscore',
+        'lib/moment', 'lib/showdown', 'lib/md5',
 
         'cs!ygg',
         'cs!ygg/user-card'],

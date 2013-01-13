@@ -1,4 +1,5 @@
-define ['cs!ygg/app', 'cs!ygg/tree', 'backbone', 'md5'], (YggApp, YggTree, Backbone, CryptoJS) ->
+define ['cs!ygg/app', 'cs!ygg/tree', 'lib/backbone', 'lib/md5'],
+ (YggApp, YggTree, Backbone, CryptoJS) ->
   
   class EventProcessor
     constructor: () ->

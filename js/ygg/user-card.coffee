@@ -1,4 +1,4 @@
-define ['jquery', 'bootstrap', 'backbone', 'underscore',
+define ['jquery', 'lib/bootstrap', 'lib/backbone', 'lib/underscore',
         'cs!ygg/app'],
   ($, Bootstrap, Backbone, _, YggApp) -> $ ->
 
